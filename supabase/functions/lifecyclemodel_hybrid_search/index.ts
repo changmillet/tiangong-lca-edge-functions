@@ -8,7 +8,9 @@ Deno.serve(
     entityKind: 'lifecyclemodel',
     entityLabel: 'Lifecycle model',
     entityPlural: 'lifecycle models',
-    rpcName: 'hybrid_search_lifecyclemodels',
+    rpcName: 'hybrid_search_lifecyclemodels_filtered',
     openDataRpcName: 'hybrid_search_open_data_catalog',
+    forwardVisibilityContext: true,
+    requireSelectedTeamContext: true,
   }),
 );

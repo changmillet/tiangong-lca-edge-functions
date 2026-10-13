@@ -11,7 +11,10 @@ const HYBRID_CALLERS = [
     'hybrid_search_flows',
     'hybrid_search_flow_versions_v2',
   ],
-  ['../supabase/functions/lifecyclemodel_hybrid_search/index.ts', 'hybrid_search_lifecyclemodels'],
+  [
+    '../supabase/functions/lifecyclemodel_hybrid_search/index.ts',
+    'hybrid_search_lifecyclemodels_filtered',
+  ],
   ['../supabase/functions/contact_hybrid_search/index.ts', 'hybrid_search_contacts'],
   ['../supabase/functions/flowproperty_hybrid_search/index.ts', 'hybrid_search_flowproperties'],
   ['../supabase/functions/source_hybrid_search/index.ts', 'hybrid_search_sources'],
