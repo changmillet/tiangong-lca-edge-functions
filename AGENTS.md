@@ -38,9 +38,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-10
-lastReviewedCommit: 96586ac7025eed8dc7d0b5c514716985ee43ff3c
-lastReviewedNote: 'Edge #473: reviewed active signed Hybrid V3 and LCIA V2 scoped readers, scope-bound cache identity and fresh LCIA qualification on every response; rollout and deployment remain separate.'
+lastReviewedAt: 2026-10-14
+lastReviewedCommit: 6e44717ce85f30574a0926d5f4c3c154ebf5123a
+lastReviewedNote: 'Edge #477: reviewed seven-kind canonical classification admission and Model Hybrid selected-team/state forwarding; Database #838 owns matching/RLS/SQL. Focused 46 and canonical 623 Deno tests pass; no remote deployment occurred. Branch, authorization and integration rules remain unchanged.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md

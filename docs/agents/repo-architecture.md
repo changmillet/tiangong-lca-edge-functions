@@ -34,9 +34,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-10
-lastReviewedCommit: 96586ac7025eed8dc7d0b5c514716985ee43ff3c
-lastReviewedNote: 'Edge #473: reviewed active signed Hybrid V3 and LCIA V2 scoped readers, scope-bound cache identity and fresh LCIA qualification on every response; rollout and deployment remain separate.'
+lastReviewedAt: 2026-10-14
+lastReviewedCommit: 6e44717ce85f30574a0926d5f4c3c154ebf5123a
+lastReviewedNote: 'Edge #477: reviewed seven-kind canonical classification admission and Model Hybrid selected-team/state forwarding; Database #838 owns matching/RLS/SQL. Focused 46 and canonical 623 Deno tests pass; no remote deployment occurred. Branch, authorization and integration rules remain unchanged.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -90,6 +90,8 @@ Shared `corsHeaders` retains the existing public-origin and custom-header wildca
 ## Raw Hybrid request admission
 
 The shared Hybrid handler authenticates and parses before rejecting raw omitted/latest requests whose page or recall count exceeds 100, whose page-current cannot fit the RPC integer argument, or whose offset exceeds 2,147,483,647 row slots. Division checks the offset before multiplication; deep valid pages remain accepted. These failures return HTTP 400 before rewrite, embedding, client creation or RPC work. Matched-version and Open Data selectors retain their separate contracts. Database `22023` errors return HTTP 400, including errors from the legacy threshold-zero retry; other RPC errors retain HTTP 500.
+
+Canonical dataset classification filters are accepted on all seven raw Hybrid routes as bounded `scope`/`code` entries with optional classification `system` and complete ancestor-code `path`. Invalid shapes, excessive bounds and elementary-flow scope on non-Flow routes are rejected before rewrite or embedding. The filter is forwarded unchanged; Database owns matching within one classification system, descendant semantics, recall, count and final version hydration. Model Hybrid uses the additive `hybrid_search_lifecyclemodels_filtered` RPC and forwards state/team context on both initial and threshold-zero calls; selected-team requests require a team before model work. Database #838 must precede this consumer rollout. Existing Process/Flow matched-version and Portal RPC boundaries remain unchanged.
 
 ## Branch Model In Practice
 

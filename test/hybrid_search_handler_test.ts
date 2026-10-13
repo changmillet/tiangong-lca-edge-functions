@@ -728,7 +728,7 @@ Deno.test(
         },
         body: JSON.stringify({
           query: 'private contact query',
-          filter_condition: '{"classification":["materials"]}',
+          filter_condition: '{"classification":[{"scope":"classification","code":"materials"}]}',
           data_source: 'my',
           state_code: 0,
           team_id: 'c3000000-0000-4000-8000-000000000297',
@@ -748,11 +748,11 @@ Deno.test(
     );
     assertEquals(rpcCalls[0].body.data_source, 'my');
     assertEquals(rpcCalls[0].body.filter_condition, {
-      classification: ['materials'],
+      classification: [{ scope: 'classification', code: 'materials' }],
     });
     assertEquals(typeof rpcCalls[0].body.filter_condition, 'object');
     assertEquals(rpcCalls[1].body.filter_condition, {
-      classification: ['materials'],
+      classification: [{ scope: 'classification', code: 'materials' }],
     });
     assertEquals(rpcCalls[0].body.state_code_filter, 0);
     assertEquals(rpcCalls[0].body.team_id_filter, 'c3000000-0000-4000-8000-000000000297');
@@ -1156,5 +1156,133 @@ Deno.test(
         }
       }
     }
+  },
+);
+
+Deno.test('canonical classification system and path survive all seven Hybrid routes', async () => {
+  for (const kind of [
+    'process',
+    'flow',
+    'lifecyclemodel',
+    'contact',
+    'source',
+    'unitgroup',
+    'flowproperty',
+  ]) {
+    const config: HybridSearchRouteConfig =
+      kind === 'process'
+        ? VERSIONED_V2_CONFIG
+        : kind === 'flow'
+          ? FLOW_VERSIONED_V2_CONFIG
+          : {
+              ...CONTACT_CONFIG,
+              entityKind: kind,
+              rpcName:
+                kind === 'lifecyclemodel'
+                  ? 'hybrid_search_lifecyclemodels_filtered'
+                  : `hybrid_search_${kind}s`,
+              requireSelectedTeamContext: true,
+            };
+    const calls: Array<{ name: string; body: Record<string, unknown> }> = [];
+    const filter = {
+      classification: [{ scope: 'classification', code: '23', system: 'ISIC', path: ['C', '23'] }],
+    };
+    const handler = createHybridSearchHandler(config, {
+      authenticate: async () => VERIFIED_JWT_AUTH,
+      rewriteQuery: async () => ({
+        semantic_query_en: 'cement',
+        fulltext_query_en: ['cement'],
+        fulltext_query_zh: [],
+      }),
+      generateEmbedding: async () => VECTOR,
+      createRpcClient: () => ({
+        client: {
+          rpc: (name: string, body: Record<string, unknown>) => {
+            calls.push({ name, body });
+            return Promise.resolve({ data: [], error: null });
+          },
+        } as unknown as SupabaseClient,
+        userContextKind: 'jwt',
+        bearerToken: 'actor.jwt.signature',
+      }),
+      logger: { log: () => undefined, error: () => undefined },
+    });
+    const response = await handler(
+      new Request('http://localhost/hybrid', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: 'cement',
+          data_source: 'te',
+          team_id: VERSION_ID,
+          state_code: 20,
+          filter_condition: filter,
+          ...(config.versionedRpcName ? { version_scope: 'matched' } : {}),
+        }),
+      }),
+    );
+    assertEquals(response.status, 200, kind);
+    assertEquals(calls.length > 0, true, kind);
+    for (const call of calls) {
+      assertEquals(call.body.filter_condition, filter, kind);
+      assertEquals(call.body.team_id_filter, VERSION_ID, kind);
+      assertEquals(call.body.state_code_filter, 20, kind);
+    }
+    if (kind === 'lifecyclemodel')
+      assertEquals(calls[0].name, 'hybrid_search_lifecyclemodels_filtered');
+  }
+});
+
+Deno.test(
+  'invalid canonical filters and missing Model team reject before paid search work',
+  async () => {
+    const model: HybridSearchRouteConfig = {
+      ...CONTACT_CONFIG,
+      entityKind: 'lifecyclemodel',
+      rpcName: 'hybrid_search_lifecyclemodels_filtered',
+      requireSelectedTeamContext: true,
+    };
+    for (const filter of [
+      { classification: {} },
+      { classification: [{ scope: 'classification', code: '23', path: ['C', '24'] }] },
+      { classification: [{ scope: 'classification', code: '23', system: '' }] },
+      { classification: [{ scope: 'classification', code: '23', path: [] }] },
+      { classification: [{ scope: 'classification', code: '23', path: Array(21).fill('23') }] },
+      { classification: [{ scope: 'elementary', code: 'air' }] },
+    ]) {
+      let paidCalls = 0;
+      const handler = createHybridSearchHandler(model, {
+        authenticate: async () => VERIFIED_JWT_AUTH,
+        rewriteQuery: () => {
+          paidCalls++;
+          throw new Error('must not rewrite');
+        },
+        logger: { log: () => undefined, error: () => undefined },
+      });
+      const response = await handler(
+        new Request('http://localhost/model', {
+          method: 'POST',
+          body: JSON.stringify({ query: 'cement', data_source: 'my', filter_condition: filter }),
+        }),
+      );
+      assertEquals(response.status, 400);
+      assertEquals(paidCalls, 0);
+    }
+    let paidCalls = 0;
+    const handler = createHybridSearchHandler(model, {
+      authenticate: async () => VERIFIED_JWT_AUTH,
+      rewriteQuery: () => {
+        paidCalls++;
+        throw new Error('must not rewrite');
+      },
+      logger: { log: () => undefined, error: () => undefined },
+    });
+    const response = await handler(
+      new Request('http://localhost/model', {
+        method: 'POST',
+        body: JSON.stringify({ query: 'cement', data_source: 'te' }),
+      }),
+    );
+    assertEquals(response.status, 400);
+    assertEquals(paidCalls, 0);
   },
 );
