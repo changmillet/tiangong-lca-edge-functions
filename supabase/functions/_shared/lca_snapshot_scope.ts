@@ -64,7 +64,7 @@ export const PUBLIC_PLUS_OWNER_DRAFT_PREDICATE_VERSION =
 export const LCA_METHOD_FACTOR_SOURCE_CONTRACT_SCHEMA_VERSION =
   'lca.method_factor_source.request.v2';
 export const LCIA_FACTOR_COVERAGE_CONTRACT_SCHEMA_VERSION =
-  'lcia.method_factor_coverage.contract.v2';
+  'lcia.method_factor_coverage.contract.v3';
 export const LCA_CALCULATION_EVIDENCE_SCHEMA_VERSION = 'lca.calculation_evidence.v2';
 export const LCA_METHOD_FACTOR_SOURCE_SNAPSHOT_SCHEMA_VERSION =
   'lca.method_factor_source.snapshot.v2';
@@ -85,6 +85,8 @@ export const LCA_STATIC_CACHE_FACTOR_MANIFEST_SHA256 =
 export const LCA_STATIC_CACHE_METHOD_COUNT = 25;
 export const LCA_METHOD_FACTOR_SOURCE_BASE_URL_BINDING = 'worker_trusted_configuration';
 export const LCIA_FACTOR_COVERAGE_COUNT_UNIT = 'exchange_method_pair';
+export const LCIA_REPLAY_ARTIFACT_FORMAT = 'lcia-coverage-replay-snapshot:v1';
+export const LCIA_REPLAY_COVERAGE_SCHEMA_VERSION = 'lcia.method_factor_coverage.matrix.v2';
 export const LCIA_UNCHARACTERIZED_ARTIFACT_FORMAT = 'lcia-uncharacterized-jsonl:v2';
 
 export type LcaDataScope =
@@ -198,8 +200,8 @@ export type LciaFactorCoverageContract = {
     'amount',
     'reason',
   ];
-  evidence_delivery: 'artifact';
-  evidence_artifact_format: typeof LCIA_UNCHARACTERIZED_ARTIFACT_FORMAT;
+  evidence_delivery: 'snapshot_replay';
+  evidence_artifact_format: typeof LCIA_REPLAY_ARTIFACT_FORMAT;
   incomplete_when_any: ['unmatched', 'invalid', 'unsupported_direction'];
   status_field: 'coverage_status';
   complete_status: 'complete';
@@ -229,7 +231,7 @@ export type LcaMethodFactorSourceSnapshot = {
 
 export type LciaUncharacterizedEvidenceArtifact = {
   artifact_url: string;
-  artifact_format: typeof LCIA_UNCHARACTERIZED_ARTIFACT_FORMAT;
+  artifact_format: typeof LCIA_UNCHARACTERIZED_ARTIFACT_FORMAT | typeof LCIA_REPLAY_ARTIFACT_FORMAT;
   artifact_sha256: string;
   record_count: number;
 };
@@ -242,7 +244,9 @@ export type LciaMethodFactorCoverage = {
 };
 
 export type LciaFactorCoverageEvidence = {
-  schema_version: typeof LCIA_FACTOR_COVERAGE_EVIDENCE_SCHEMA_VERSION;
+  schema_version:
+    | typeof LCIA_FACTOR_COVERAGE_EVIDENCE_SCHEMA_VERSION
+    | typeof LCIA_REPLAY_COVERAGE_SCHEMA_VERSION;
   source_snapshot_sha256: typeof LCA_STATIC_CACHE_SOURCE_SNAPSHOT_SHA256;
   method_manifest_sha256: typeof LCA_STATIC_CACHE_METHOD_MANIFEST_SHA256;
   factor_manifest_sha256: typeof LCA_STATIC_CACHE_FACTOR_MANIFEST_SHA256;
@@ -737,8 +741,8 @@ export function buildLciaFactorCoverageContract(): LciaFactorCoverageContract {
       'amount',
       'reason',
     ],
-    evidence_delivery: 'artifact',
-    evidence_artifact_format: LCIA_UNCHARACTERIZED_ARTIFACT_FORMAT,
+    evidence_delivery: 'snapshot_replay',
+    evidence_artifact_format: LCIA_REPLAY_ARTIFACT_FORMAT,
     incomplete_when_any: ['unmatched', 'invalid', 'unsupported_direction'],
     status_field: 'coverage_status',
     complete_status: 'complete',
@@ -1115,7 +1119,8 @@ function parseLciaFactorCoverageEvidence(raw: unknown): LciaFactorCoverageEviden
       'by_method',
       'uncharacterized_evidence',
     ]) ||
-    value.schema_version !== LCIA_FACTOR_COVERAGE_EVIDENCE_SCHEMA_VERSION ||
+    (value.schema_version !== LCIA_FACTOR_COVERAGE_EVIDENCE_SCHEMA_VERSION &&
+      value.schema_version !== LCIA_REPLAY_COVERAGE_SCHEMA_VERSION) ||
     value.source_snapshot_sha256 !== LCA_STATIC_CACHE_SOURCE_SNAPSHOT_SHA256 ||
     value.method_manifest_sha256 !== LCA_STATIC_CACHE_METHOD_MANIFEST_SHA256 ||
     value.factor_manifest_sha256 !== LCA_STATIC_CACHE_FACTOR_MANIFEST_SHA256 ||
@@ -1218,6 +1223,9 @@ function parseLciaFactorCoverageEvidence(raw: unknown): LciaFactorCoverageEviden
 
   const uncharacterizedEvidence = parseUncharacterizedEvidenceArtifact(
     value.uncharacterized_evidence,
+    value.schema_version === LCIA_REPLAY_COVERAGE_SCHEMA_VERSION
+      ? LCIA_REPLAY_ARTIFACT_FORMAT
+      : LCIA_UNCHARACTERIZED_ARTIFACT_FORMAT,
   );
   if (incompleteCount > 0 && !uncharacterizedEvidence) {
     return null;
@@ -1230,7 +1238,7 @@ function parseLciaFactorCoverageEvidence(raw: unknown): LciaFactorCoverageEviden
   }
 
   return {
-    schema_version: LCIA_FACTOR_COVERAGE_EVIDENCE_SCHEMA_VERSION,
+    schema_version: value.schema_version,
     source_snapshot_sha256: LCA_STATIC_CACHE_SOURCE_SNAPSHOT_SHA256,
     method_manifest_sha256: LCA_STATIC_CACHE_METHOD_MANIFEST_SHA256,
     factor_manifest_sha256: LCA_STATIC_CACHE_FACTOR_MANIFEST_SHA256,
@@ -1247,6 +1255,7 @@ function parseLciaFactorCoverageEvidence(raw: unknown): LciaFactorCoverageEviden
 
 function parseUncharacterizedEvidenceArtifact(
   raw: unknown,
+  format: LciaUncharacterizedEvidenceArtifact['artifact_format'],
 ): LciaUncharacterizedEvidenceArtifact | null {
   const value = recordValue(raw);
   if (
@@ -1260,7 +1269,7 @@ function parseUncharacterizedEvidenceArtifact(
   const recordCount = nonnegativeInteger(value.record_count);
   if (
     !artifactUrl ||
-    value.artifact_format !== LCIA_UNCHARACTERIZED_ARTIFACT_FORMAT ||
+    value.artifact_format !== format ||
     !artifactSha256 ||
     recordCount === null ||
     recordCount === 0
@@ -1269,7 +1278,7 @@ function parseUncharacterizedEvidenceArtifact(
   }
   return {
     artifact_url: artifactUrl,
-    artifact_format: LCIA_UNCHARACTERIZED_ARTIFACT_FORMAT,
+    artifact_format: format,
     artifact_sha256: artifactSha256,
     record_count: recordCount,
   };

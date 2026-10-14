@@ -124,7 +124,7 @@ Deno.test(
       no_lcia: false,
     };
     const identity = JSON.stringify({
-      version: 'lca_snapshot_build_v2',
+      version: 'lca_snapshot_build_v3',
       numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION,
       scope: 'full_library',
       process_filter: processFilter,
@@ -230,5 +230,54 @@ Deno.test(
     assert(canonicalArgs[field] !== onlyA.state.rpcCalls[0].args[field]);
     assert(onlyA.state.rpcCalls[0].args[field] !== onlyB.state.rpcCalls[0].args[field]);
     assert(onlyA.state.rpcCalls[0].args[field] !== full.state.rpcCalls[0].args[field]);
+  },
+);
+
+for (const mode of [
+  'blocked',
+  'failed',
+  'completed',
+  'succeeded',
+  'cancelled',
+  'unknown',
+  undefined,
+]) {
+  Deno.test(`snapshot queue never advertises ${mode} as pending`, async () => {
+    const supabase = {
+      rpc: () =>
+        Promise.resolve({
+          data: { ok: true, mode, job_id: 'job', snapshot_id: 'snapshot' },
+          error: null,
+        }),
+    };
+    const result = await ensureLcaSnapshotBuildQueued(supabase as never, {
+      scope: 'full_library',
+      dataScope: 'public_plus_owner_draft',
+      userId: 'user-1',
+    });
+    assertEquals(result.ok, false);
+    if (!result.ok) assertEquals(result.status, 409);
+  });
+}
+Deno.test(
+  'snapshot queue propagates terminal Database refusal without another enqueue',
+  async () => {
+    let calls = 0;
+    const supabase = {
+      rpc: () => {
+        calls++;
+        return Promise.resolve({
+          data: { ok: false, code: 'SNAPSHOT_BUILD_FAILED', status: 409 },
+          error: null,
+        });
+      },
+    };
+    const result = await ensureLcaSnapshotBuildQueued(supabase as never, {
+      scope: 'full_library',
+      dataScope: 'public_plus_owner_draft',
+      userId: 'user-1',
+    });
+    assertEquals(result, { ok: false, error: 'SNAPSHOT_BUILD_FAILED', status: 409 });
+    assertEquals(calls, 1);
   },
 );
