@@ -38,9 +38,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-10
-lastReviewedCommit: 96586ac7025eed8dc7d0b5c514716985ee43ff3c
-lastReviewedNote: 'Edge #473: reviewed active signed Hybrid V3 and LCIA V2 scoped readers, scope-bound cache identity and fresh LCIA qualification on every response; rollout and deployment remain separate.'
+lastReviewedAt: 2026-10-14
+lastReviewedCommit: 1542f289cc1cf7707c207dd8c3b356a9bec215ab
+lastReviewedNote: 'Reviewed Edge #480 replay coverage v2, contract v3 and terminal snapshot enqueue errors. Auth, trusted locators and fail-closed source/count checks remain; legacy evidence remains readable. No hosted deployment.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md

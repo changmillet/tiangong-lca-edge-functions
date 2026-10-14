@@ -39,7 +39,7 @@ export type LcaSnapshotCalculationContract = {
 };
 
 const SNAPSHOT_BUILD_REQUEST_VERSION = 'lca_snapshot_build_v1';
-const VERSIONED_SCOPE_SNAPSHOT_BUILD_REQUEST_VERSION = 'lca_snapshot_build_v2';
+const VERSIONED_SCOPE_SNAPSHOT_BUILD_REQUEST_VERSION = 'lca_snapshot_build_v3';
 export async function ensureLcaSnapshotBuildQueued(
   supabase: SupabaseClient,
   args: {
@@ -135,6 +135,16 @@ export async function ensureLcaSnapshotBuildQueued(
       ok: false,
       error: String(result?.code ?? 'snapshot_build_worker_jobs_enqueue_failed'),
       status: Number(result?.status ?? 500),
+    };
+  }
+
+  // Only active work is pollable. A blocked/terminal or unknown mode must never
+  // be advertised as queued, including replies from older Database deployments.
+  if (result.mode !== 'queued' && result.mode !== 'in_progress') {
+    return {
+      ok: false,
+      error: result.mode === 'blocked' ? 'SNAPSHOT_BUILD_BLOCKED' : 'SNAPSHOT_BUILD_NOT_PENDING',
+      status: 409,
     };
   }
 

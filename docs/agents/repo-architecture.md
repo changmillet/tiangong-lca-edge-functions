@@ -34,9 +34,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-10
-lastReviewedCommit: 96586ac7025eed8dc7d0b5c514716985ee43ff3c
-lastReviewedNote: 'Edge #473: reviewed active signed Hybrid V3 and LCIA V2 scoped readers, scope-bound cache identity and fresh LCIA qualification on every response; rollout and deployment remain separate.'
+lastReviewedAt: 2026-10-14
+lastReviewedCommit: 6e44717ce85f30574a0926d5f4c3c154ebf5123a
+lastReviewedNote: 'Edge #477: reviewed seven-kind canonical classification admission and Model Hybrid selected-team/state forwarding; Database #838 owns matching/RLS/SQL. Focused 46 and canonical 623 Deno tests pass; no remote deployment occurred. Branch, authorization and integration rules remain unchanged.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -90,6 +90,8 @@ Shared `corsHeaders` retains the existing public-origin and custom-header wildca
 ## Raw Hybrid request admission
 
 The shared Hybrid handler authenticates and parses before rejecting raw omitted/latest requests whose page or recall count exceeds 100, whose page-current cannot fit the RPC integer argument, or whose offset exceeds 2,147,483,647 row slots. Division checks the offset before multiplication; deep valid pages remain accepted. These failures return HTTP 400 before rewrite, embedding, client creation or RPC work. Matched-version and Open Data selectors retain their separate contracts. Database `22023` errors return HTTP 400, including errors from the legacy threshold-zero retry; other RPC errors retain HTTP 500.
+
+Canonical dataset classification filters are accepted on all seven raw Hybrid routes as bounded `scope`/`code` entries with optional classification `system` and complete ancestor-code `path`. Invalid shapes, excessive bounds and elementary-flow scope on non-Flow routes are rejected before rewrite or embedding. The filter is forwarded unchanged; Database owns matching within one classification system, descendant semantics, recall, count and final version hydration. Model Hybrid uses the additive `hybrid_search_lifecyclemodels_filtered` RPC and forwards state/team context on both initial and threshold-zero calls; selected-team requests require a team before model work. Database #838 must precede this consumer rollout. Existing Process/Flow matched-version and Portal RPC boundaries remain unchanged.
 
 ## Branch Model In Practice
 
@@ -381,3 +383,5 @@ Portal V1 and V2 hashes now bind provider identity, reasoning, actual synonym ru
 The live parser admits explicit Hybrid V3 and rejects scope fields on legacy wires. V3 calls only `api.portal_hybrid_search_v3` with required `p_allowed_brands`, validates candidate page V3 including every exact member's brand, and returns Edge page V3. The V3 model-cache identity binds wire version, canonical complete scope and user brand. Scope changes therefore cannot reuse a continuation from another deployment. V1/V2 remain explicit compatibility paths and never serve as V3 fallback.
 
 LCIA request V2 requires the same signed `allowedBrandCodes`; it calls only `api.portal_get_published_lcia_values_v2`. Browser fields and numeric page V1 stay unchanged. Cache identity includes the exact signed bytes, and a cached numeric payload never skips the current database visibility/publication check. Every read obtains current DB results, including a revocation before the former 60-second cache boundary. No provider credentials, endpoint, HMAC path or ordinary actor route changes. Local checks do not activate any hosted function.
+
+LCIA replay coverage (Worker #320 / Edge #480): new build requests use coverage contract v3 (`snapshot_replay`) and a v3 request identity. Consumers accept matrix v2 only with `lcia-coverage-replay-snapshot:v1`, retaining all source, identity, count and scope checks; matrix v1 still requires legacy JSONL v2. A replay locator identifies private snapshot metadata, never a browser download. Snapshot enqueue accepts only `queued`/`in_progress` as pollable; Database failure/blockage and unexpected modes terminate polling. Deploy compatible consumers and Worker before admitting v3 requests.

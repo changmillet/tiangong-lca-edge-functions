@@ -86,6 +86,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const VALID_FLOW_TYPES = new Set(['Elementary flow', 'Product flow', 'Waste flow', 'Other flow']);
 
+function hasInvalidClassificationFilter(
+  filter: Record<string, unknown>,
+  entityKind: string,
+): boolean {
+  if (!('classification' in filter)) return false;
+  if (!Array.isArray(filter.classification) || filter.classification.length > 50) return true;
+  const validCode = (value: unknown): value is string =>
+    typeof value === 'string' && value.trim().length > 0 && value.length <= 200;
+  return filter.classification.some((item) => {
+    if (!isRecord(item) || !validCode(item.code)) return true;
+    if (item.scope !== 'classification' && item.scope !== 'elementary') return true;
+    if (item.scope === 'elementary' && entityKind !== 'flow') return true;
+    if ('system' in item && !validCode(item.system)) return true;
+    if ('path' in item) {
+      if (!Array.isArray(item.path) || item.path.length === 0 || item.path.length > 20) return true;
+      if (!item.path.every(validCode)) return true;
+      if (item.path[item.path.length - 1].trim() !== item.code.trim()) return true;
+    }
+    return false;
+  });
+}
+
 function hasInvalidMatchedFlowFilter(filter: Record<string, unknown>): boolean {
   if ('flowType' in filter) {
     if (typeof filter.flowType !== 'string') return true;
@@ -109,16 +131,7 @@ function hasInvalidMatchedFlowFilter(filter: Record<string, unknown>): boolean {
   ) {
     return true;
   }
-  if (!('classification' in filter)) return false;
-  if (!Array.isArray(filter.classification) || filter.classification.length > 50) return true;
-  return filter.classification.some(
-    (item) =>
-      !isRecord(item) ||
-      (item.scope !== 'classification' && item.scope !== 'elementary') ||
-      typeof item.code !== 'string' ||
-      !item.code.trim() ||
-      item.code.length > 200,
-  );
+  return false;
 }
 
 export function createHybridSearchHandler(
@@ -152,6 +165,11 @@ export function createHybridSearchHandler(
       }
 
       const versioned = parsedRequest.versionScope === 'matched';
+      if (
+        hasInvalidClassificationFilter(parsedRequest.rpcOptions.filter_condition, config.entityKind)
+      ) {
+        return jsonResponse({ error: 'Invalid dataset classification filter contract' }, 400);
+      }
       // Raw latest RPCs use integer pagination and a 100-candidate budget.
       // Open Data and matched versions have their own Database contracts.
       if (!versioned && !parsedRequest.openDataFilterRequested) {
@@ -197,7 +215,7 @@ export function createHybridSearchHandler(
         );
       }
       if (
-        versioned &&
+        (versioned || !config.versionedRpcName) &&
         config.requireSelectedTeamContext &&
         parsedRequest.rpcOptions.data_source === 'te' &&
         !parsedRequest.visibilityOptions.team_id_filter
