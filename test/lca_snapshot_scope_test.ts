@@ -885,3 +885,20 @@ Deno.test('snapshot filters admit only explicit well-typed numerical evidence', 
     'snapshot_process_states_missing',
   );
 });
+
+Deno.test(
+  'replay snapshot evidence is accepted only with matching matrix version and exact counts',
+  async () => {
+    const scope = await buildPublicPlusOwnerDraftScopeBinding('user-1');
+    const evidence = buildCalculationEvidenceV2(scope.manifest_sha256);
+    const matrix = evidence.lcia_factor_coverage;
+    matrix.schema_version = 'lcia.method_factor_coverage.matrix.v2';
+    matrix.uncharacterized_evidence!.artifact_format = 'lcia-coverage-replay-snapshot:v1';
+    assertEquals(validateLcaCalculationEvidence(evidence, scope.manifest_sha256).ok, true);
+    matrix.schema_version = 'lcia.method_factor_coverage.matrix.v1';
+    assertEquals(validateLcaCalculationEvidence(evidence, scope.manifest_sha256).ok, false);
+    matrix.schema_version = 'lcia.method_factor_coverage.matrix.v2';
+    matrix.uncharacterized_evidence!.record_count -= 1;
+    assertEquals(validateLcaCalculationEvidence(evidence, scope.manifest_sha256).ok, false);
+  },
+);
