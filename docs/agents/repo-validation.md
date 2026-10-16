@@ -29,14 +29,15 @@ checkPaths:
   - scripts/**
   - test.example.http
   - .github/workflows/**
+  - .github/dependabot.yml
   - .github/PULL_REQUEST_TEMPLATE/**
   - .githooks/pre-push
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-14
-lastReviewedCommit: 1542f289cc1cf7707c207dd8c3b356a9bec215ab
-lastReviewedNote: 'Reviewed Edge #480 replay coverage v2, contract v3 and terminal snapshot enqueue errors. Auth, trusted locators and fail-closed source/count checks remain; legacy evidence remains readable. No hosted deployment.'
+lastReviewedAt: 2026-10-16
+lastReviewedCommit: fc82dfe3e4000ebc3df822830e1303ef03bff575
+lastReviewedNote: 'Reviewed for Edge #482: dependency-input CI reuses the canonical secretless gate; discovery, security, exact runtime qualification and deployment remain separate.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -55,7 +56,7 @@ pnpm lint
 pnpm check
 ```
 
-`pnpm check` first requires exact Deno `2.1.4` / bundled TypeScript `5.6.2`, Supabase CLI `2.116.0`, Node `24.19.0`, and pnpm `11.24.0`. It then checks all 162 enabled `supabase/functions/*/index.ts` and `test/*.ts` roots (85 of them under `test/`) in one shared graph, runs 102 Node contract tests, and executes 619 default Deno behavior tests while the one credentialed live Upstash test remains ignored unless explicitly selected. Deno is the authoritative compiler; no npm TypeScript package participates.
+`pnpm check` first requires exact Deno `2.1.4` / bundled TypeScript `5.6.2`, Supabase CLI `2.116.0`, Node `24.19.0`, and pnpm `11.24.0`. It then checks every enabled `supabase/functions/*/index.ts` and `test/*.ts` root in one bounded shared graph, runs the Node contract tests, and executes the default Deno behavior tests while the credentialed live Upstash test remains ignored unless explicitly selected. The command reports actual inventory and test counts. Deno is the authoritative compiler; no npm TypeScript package participates.
 
 Review note, 2026-08-31: Edge #357 upgrades every direct runtime/import dependency to the latest stable version verified for exact Deno 2.1.4, including OpenAI 7.8 and Supabase JSR 2.112.4. Validation requires empty `pnpm outdated` and exact-Deno `deno outdated --latest`, one import-map/direct-import contract, targeted OpenAI/Redis/Supabase/Auth checks, Redis 0.41.2's dual-provider signature adaptation, the canonical full gate, and no Portal credential/config mutation. Official OpenAI documentation continues to define `client.responses.create` as the primary JavaScript API; Chat fallback remains covered.
 
@@ -70,6 +71,22 @@ If you reactivate or rely on that route family, update the inventory and validat
 ### Browser preflight regression
 
 For shared CORS changes, exercise actual cross-origin requests in both Firefox and Chromium with the complete Functions JS header set: Authorization, apikey, Content-Type, x-client-info, and x-region when a function region is selected. Isolated Firefox 140.0.2 and 153.0 regressions showed that wildcard header permission allowed POST but did not reuse its preflight cache; explicitly naming the SDK headers restored reuse. Keeping `*` alongside those names preserves other callers' header permission. Compare the old and new header policy across more than the browser's default cache lifetime, and prove that a changed/expired bearer still reaches authentication and receives 401 rather than reusing success. Include an additional caller header to verify wildcard compatibility. `test/command_runtime_test.ts` separately proves explicit SDK header coverage, preflight bypassing actor/business work, POST resolving its actor on every call, and unsupported methods remaining rejected. No response-cache directive or credential wildcard is introduced.
+
+## Dependency proposals and scoped CI
+
+The existing `CI` workflow runs on PRs to `dev` and `main` only when dependency manifests, toolchain selectors, Actions workflows, monitoring configuration or its control test change. Manual dispatch remains available. It checks out the exact PR head without persisted credentials and runs the same frozen install, `pnpm lint` and `pnpm check` commands. PR-number concurrency cancels superseded runs. Unrelated runtime or documentation PRs gain no extra automatic gate. There are no repository secrets, write permissions, privileged PR events, remote probes or deployments in this workflow. Same-repository origin is not trust; the gate grants no additional authority to bot or human authors. If intake or adoption logic needs bot identity, use the PR author, not the current event actor.
+
+Dependabot version proposals target `dev`: root npm developer tools on Tuesdays at 05:00, Deno imports at 05:20, and Actions at 05:40, all Asia/Shanghai. Seven-day version cooldowns, two npm/Deno PR slots and one Actions slot bound traffic. Minor/patch updates are grouped by ecosystem; majors remain individual proposals. No automatic merge or dependency upgrade is authorized by monitoring.
+
+The Deno entry selects `/supabase/functions`, whose `deno.json` owns the imports. Root `deno.json` only extends that file; the upstream updater fetches the selected manifest and declared workspace members, not `extends`, so a second root entry would not discover another graph. The canonical checks still validate the root configuration and all enabled source/test consumers. The upstream parser recognizes ordinary npm/JSR specifiers but does not match the retained `npm:/zod@4.5.4` spelling or either HTTPS mapping: `https://esm.sh/@upstash/redis@1.38.3` and `https://deno.land/x/postgresjs@v3.4.8/mod.js`. These three pins remain under explicit reviewed maintenance. Audit them and direct imports when their owner proposes an upgrade; do not relabel them as monitored registry dependencies or rewrite imports to make a scan look complete. Platform's generated Function mirror remains owned by its exact-Edge-commit refresh procedure; this rollout does not edit that mirror.
+
+Keep exact Deno/TypeScript, Node/pnpm, Supabase CLI/runtime, Functions JS and other reviewed dependency contracts. New version proposals must pass existing pin and behavior tests; an intentional supported upgrade updates its owning contract and proof together. Actions monitoring does not update `with.version` scalar toolchain pins or raw runtime selectors; those remain explicitly reviewed tooling maintenance. GitHub currently documents pnpm through version 10, so a successful hosted npm updater and frozen pnpm 11 candidate install must establish actual lockfile compatibility rather than assuming it from configuration parsing.
+
+Configuration activates only after it reaches default `main`; a merged `dev` PR does not activate discovery or establish root-main eligibility. Security proposals still target default `main` and use the controlled main-hotfix/backmerge route. The `target-branch: dev` options apply to version updates, so their groups, cooldowns and fixture exclusions do not configure default-main security behavior. Version exclusions use repository-relative paths without a leading slash. Verify repository alert/security-update settings separately; this file does not enable them or establish successful hosted scans. Discovery may proceed independently of adoption, but bot association/adoption remains blocked wherever the independent merge service's running author protection has not been verified. Never enable merging as a prerequisite for discovery.
+
+Validation includes `node --test scripts/dependency-ci-contract.test.cjs`, frozen install, `pnpm lint`, `pnpm check`, and strict Docpact validation/lint. Preserve actual updater and candidate CI receipts before claiming hosted coverage. Source delivery, promotion, root integration and any later Function deployment remain separate outcomes.
+
+Sources: [upstream Deno fetcher](https://github.com/dependabot/dependabot-core/blob/main/deno/lib/dependabot/deno/file_fetcher.rb), [upstream Deno parser](https://github.com/dependabot/dependabot-core/blob/main/deno/lib/dependabot/deno/file_parser.rb), [supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories), and [Dependabot branch options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#target-branch).
 
 ## Validation Matrix
 
@@ -216,7 +233,7 @@ Install the versioned local hook once per checkout:
 ./scripts/install-git-hooks.sh
 ```
 
-The `pre-push` hook runs `scripts/docpact-gate.sh`, which delegates CLI lookup to `scripts/docpact` and performs strict config validation plus enforced lint before the push leaves the machine. It then runs non-mutating `pnpm lint` and canonical `pnpm check` as the local test gate, and aborts if the lint step changes the working tree before `pnpm check`. The wrapper checks `DOCPACT_BIN`, Cargo install locations, Homebrew install locations, and then `PATH`, so local agent shells should not fail only because bare `docpact` is unavailable. The default comparison base is `origin/dev` for routine branches and `origin/main` for promote or hotfix branches. Override it for unusual stacks with `DOCPACT_BASE_REF=<ref>` or `scripts/docpact-gate.sh --base <ref>`. The gate writes its detailed report to a temporary file so normal pushes do not create `.docpact/runs/` artifacts. The GitHub `CI` workflow is manual-dispatch only rather than an ordinary push-triggered test runner.
+The `pre-push` hook runs `scripts/docpact-gate.sh`, which delegates CLI lookup to `scripts/docpact` and performs strict config validation plus enforced lint before the push leaves the machine. It then runs non-mutating `pnpm lint` and canonical `pnpm check` as the local test gate, and aborts if the lint step changes the working tree before `pnpm check`. The wrapper checks `DOCPACT_BIN`, Cargo install locations, Homebrew install locations, and then `PATH`, so local agent shells should not fail only because bare `docpact` is unavailable. The default comparison base is `origin/dev` for routine branches and `origin/main` for promote or hotfix branches. Override it for unusual stacks with `DOCPACT_BASE_REF=<ref>` or `scripts/docpact-gate.sh --base <ref>`. The gate writes its detailed report to a temporary file so normal pushes do not create `.docpact/runs/` artifacts. The GitHub `CI` workflow supports manual dispatch and dependency-input PRs; it does not add a push-triggered test runner.
 
 Partial package import proof must cover policy omission/v2/invalid values, exact RPC dispatch, preserved requester authorization, committed-count projection and `import_details` signed downloads. Pair with Database #634 and Worker #283; deploy Database/Worker compatibility before Edge and enable the frontend last.
 
@@ -239,3 +256,5 @@ Run `test/portal_brand_scope_test.ts` with the retained Hybrid contract suite on
 ## Scoped Portal wire qualification
 
 `portal_brand_scope_test.ts`, `portal_hybrid_search_v1_test.ts` and `portal_data_product_results_v1_test.ts` cover canonical signed scope, strict legacy/new wire separation, the exact scoped RPC and parameter, rejection of legacy DTO fallback, and LCIA revalidation before cache expiry. Run `pnpm check` with the repository Node and Deno versions, preserving the existing HMAC, replay/admission, deadlines, provider and publication regressions. Hosted Database/Edge/Portal compatibility, paired brand deployments, cutover and cache invalidation remain separate release receipts; local success is not deployment.
+
+Independent export changes require default-format/read-versus-enqueue tests, terminal-poll reuse, live actor revocation, bounded page signing, canonical audit-path reuse, and invalid binding/size/hash/role rejection. Pair the full Edge lint/check gate with Database admission and actual Worker full-library export proof. No test may obtain production deployment authority from this contract.

@@ -735,3 +735,205 @@ Deno.test('LCA release repository requires an explicit actor client', () => {
     'LCA release repository requires an explicit actor Supabase client',
   );
 });
+
+Deno.test('calculation exports default to Parquet and reject unbounded caller options', () => {
+  assertEquals(
+    lcaReleaseCommandRequestSchema.parse({
+      action: 'request_calculation_export',
+      packageId: PACKAGE_ID,
+    }),
+    { action: 'request_calculation_export', packageId: PACKAGE_ID, format: 'parquet', offset: 0 },
+  );
+  for (const extra of [
+    { format: 'zip' },
+    { offset: -1 },
+    { offset: 10000 },
+    { maxBytes: 1e12 },
+    { bundle: {} },
+  ]) {
+    assertThrows(() =>
+      lcaReleaseCommandRequestSchema.parse({
+        action: 'request_calculation_export',
+        packageId: PACKAGE_ID,
+        ...extra,
+      }),
+    );
+  }
+});
+
+function exportFixture(status = 'completed', count = 25) {
+  const actor = new FakeSupabase();
+  const service = new FakeSupabase();
+  actor.rpcResults.set(
+    'get_lcia_result_calculation_bundle',
+    rpcSuccess({
+      calculationBundle: {
+        calculationId: RELEASE_RUN_ID,
+        bundleContentHash: PLAN_HASH,
+        manifestSha256: MANIFEST_HASH,
+        manifestUrl: `s3://lca_results/calculation-bundles/${RELEASE_RUN_ID}/${PLAN_HASH}/calculation-bundle.json`,
+      },
+    }),
+  );
+  const file = (name: string, rows: number) => ({
+    schemaVersion: 'tiangong.calculation-download.v1',
+    role: name.endsWith('.json') ? 'export_manifest' : 'lci_inventory_csv',
+    group: 'advanced_data',
+    fileName: name,
+    mediaType: name.endsWith('.json') ? 'application/json' : 'application/gzip',
+    sha256: PLAN_HASH,
+    byteSize: 200,
+    recordCount: rows,
+    artifactUrl: `s3://lca_results/calculation-exports/${PLAN_HASH}/${ARTIFACT_ID}/${name}`,
+  });
+  const data = {
+    packageId: PACKAGE_ID,
+    format: 'csv',
+    bundleContentHash: PLAN_HASH,
+    sourceManifestSha256: MANIFEST_HASH,
+    workerJobId: ARTIFACT_ID,
+    status,
+    result:
+      status === 'completed'
+        ? {
+            schemaVersion: 'lca.calculation_export.result.v1',
+            workerJobId: ARTIFACT_ID,
+            packageId: PACKAGE_ID,
+            format: 'csv',
+            bundleContentHash: PLAN_HASH,
+            sourceManifestSha256: MANIFEST_HASH,
+            files: Array.from({ length: count }, (_, i) =>
+              file(`lci-inventory-${String(i).padStart(6, '0')}.csv.gz`, 250000),
+            ),
+            manifest: file('export-manifest.json', count),
+          }
+        : null,
+  };
+  service.rpcResults.set('svc_lca_calculation_export', rpcSuccess(data));
+  return {
+    actor,
+    service,
+    data,
+    repository: createLcaReleaseCommandRepository(actor as never, service as never),
+  };
+}
+
+Deno.test('export read signs only a bounded page and manifest, and never enqueues', async () => {
+  const fixture = exportFixture();
+  const response = await fixture.repository.calculationExport(USER_ID, {
+    action: 'get_calculation_export',
+    packageId: PACKAGE_ID,
+    format: 'csv',
+    offset: 0,
+  });
+  assertEquals(response.ok, true);
+  if (!response.ok) return;
+  assertEquals(fixture.service.rpcCalls[0].args.p_enqueue, false);
+  assertEquals(fixture.service.signedDownloadCalls.length, 21);
+  assertEquals((response.data as any).result.totalFiles, 25);
+  assertEquals((response.data as any).result.nextOffset, 20);
+  assertEquals(JSON.stringify(response.data).includes('artifactUrl'), false);
+  const last = await fixture.repository.calculationExport(USER_ID, {
+    action: 'get_calculation_export',
+    packageId: PACKAGE_ID,
+    format: 'csv',
+    offset: 20,
+  });
+  assertEquals(last.ok, true);
+  if (last.ok) assertEquals((last.data as any).result.files.length, 5);
+});
+
+Deno.test(
+  'export terminal polling retains failure and revoked actors cannot read or enqueue',
+  async () => {
+    const fixture = exportFixture('failed');
+    Object.assign(fixture.data, {
+      errorCode: 'artifact_too_large',
+      errorMessage: 'private-bucket/private-key: provider response',
+    });
+    fixture.service.rpcResults.set('svc_lca_calculation_export', rpcSuccess(fixture.data));
+
+    const request = {
+      action: 'get_calculation_export' as const,
+      packageId: PACKAGE_ID,
+      format: 'csv' as const,
+      offset: 0,
+    };
+    for (let i = 0; i < 5; i++)
+      assertEquals((await fixture.repository.calculationExport(USER_ID, request)).ok, true);
+    assertEquals(
+      fixture.service.rpcCalls.every((call) => call.args.p_enqueue === false),
+      true,
+    );
+    assertEquals(fixture.service.signedDownloadCalls.length, 0);
+    const safe = await fixture.repository.calculationExport(USER_ID, request);
+    assertEquals(JSON.stringify(safe).includes('private-bucket'), false);
+    fixture.actor.rpcResults.set('get_lcia_result_calculation_bundle', {
+      data: { ok: false, code: 'not_data_product_manager', status: 403, message: 'Denied' },
+      error: null,
+    });
+    const denied = await fixture.repository.calculationExport(USER_ID, {
+      ...request,
+      action: 'request_calculation_export',
+    });
+    assertEquals(denied.ok, false);
+    assertEquals(fixture.service.rpcCalls.length, 6);
+  },
+);
+
+Deno.test(
+  'export signing rejects oversized, foreign, duplicate and changed-binding files',
+  async () => {
+    const mutations = [
+      (d: any) => (d.result.files[0].byteSize = 64 * 1024 * 1024 + 1),
+      (d: any) => (d.result.files[0].recordCount = 250001),
+      (d: any) => (d.result.files[0].artifactUrl = 's3://lca_results/foreign.csv'),
+      (d: any) => d.result.files.push(d.result.files[0]),
+      (d: any) => (d.result.sourceManifestSha256 = 'c'.repeat(64)),
+    ];
+    for (const mutate of mutations) {
+      const fixture = exportFixture();
+      mutate(fixture.data);
+      fixture.service.rpcResults.set('svc_lca_calculation_export', rpcSuccess(fixture.data));
+      const response = await fixture.repository.calculationExport(USER_ID, {
+        action: 'get_calculation_export',
+        packageId: PACKAGE_ID,
+        format: 'csv',
+        offset: 0,
+      });
+      assertEquals(response.ok, false);
+      assertEquals(fixture.service.signedDownloadCalls.length, 0);
+    }
+  },
+);
+
+Deno.test(
+  'audit export signs canonical evidence paths without copying the original bundle',
+  async () => {
+    const fixture = exportFixture('completed', 1);
+    const data = fixture.data as any;
+    data.format = data.result.format = 'audit';
+    const canonical = `calculation-bundles/${RELEASE_RUN_ID}/${PLAN_HASH}/axes/processes.ndjson.gz`;
+    Object.assign(data.result.files[0], {
+      fileName: 'evidence-000000.ndjson.gz',
+      role: 'calculation_evidence_bundle',
+      group: 'audit_evidence',
+      mediaType: 'application/gzip',
+      sourcePath: 'axes/processes.ndjson.gz',
+      artifactUrl: `s3://lca_results/${canonical}`,
+    });
+    fixture.service.rpcResults.set('svc_lca_calculation_export', rpcSuccess(data));
+    const request = {
+      action: 'get_calculation_export' as const,
+      packageId: PACKAGE_ID,
+      format: 'audit' as const,
+      offset: 0,
+    };
+    assertEquals((await fixture.repository.calculationExport(USER_ID, request)).ok, true);
+    assertEquals(fixture.service.signedDownloadCalls[0].objectKey, canonical);
+    data.result.files[0].sourcePath = '../foreign.ndjson.gz';
+    fixture.service.rpcResults.set('svc_lca_calculation_export', rpcSuccess(data));
+    assertEquals((await fixture.repository.calculationExport(USER_ID, request)).ok, false);
+    assertEquals(fixture.service.signedDownloadCalls.length, 2);
+  },
+);
