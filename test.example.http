@@ -548,3 +548,17 @@ curl -i --location --request POST '{{$dotenv LOCAL_ENDPOINT}}/app_lca_release_co
       "action": "get_release",
       "releaseRunId": "{{$dotenv LCA_RELEASE_RUN_ID}}"
     }'
+
+### Explicit optional calculation export (manager; completed immutable package)
+POST {{baseUrl}}/functions/v1/app_lca_release_commands
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"action":"request_calculation_export","packageId":"00000000-0000-4000-8000-000000000001","format":"parquet"}
+
+### Read optional export status without enqueueing (page size 20)
+POST {{baseUrl}}/functions/v1/app_lca_release_commands
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"action":"get_calculation_export","packageId":"00000000-0000-4000-8000-000000000001","format":"csv","offset":0}

@@ -168,7 +168,21 @@ const createArtifactDownloadSchema = z
   .object({ action: z.literal('create_artifact_download'), artifactId: uuidSchema })
   .strict();
 
+const calculationExportFields = {
+  packageId: uuidSchema,
+  format: z.enum(['parquet', 'csv', 'lcia_xlsx', 'lcia_csv', 'audit']).default('parquet'),
+  offset: z.number().int().min(0).max(9999).default(0),
+};
+const requestCalculationExportSchema = z
+  .object({ action: z.literal('request_calculation_export'), ...calculationExportFields })
+  .strict();
+const getCalculationExportSchema = z
+  .object({ action: z.literal('get_calculation_export'), ...calculationExportFields })
+  .strict();
+
 export const lcaReleaseCommandRequestSchema = z.discriminatedUnion('action', [
+  requestCalculationExportSchema,
+  getCalculationExportSchema,
   prepareSchema,
   createArtifactUploadsSchema,
   finalizeArtifactsSchema,
@@ -262,6 +276,8 @@ function auditFor(request: LcaReleaseCommandRequest, actor: ActorContext) {
     case 'finalize_artifacts':
     case 'get_release':
     case 'get_current':
+    case 'request_calculation_export':
+    case 'get_calculation_export':
     case 'get_calculation_bundle':
     case 'create_artifact_download':
       return null;
@@ -395,6 +411,11 @@ export async function executeLcaReleaseCommand(
     case 'get_current': {
       const result = await repository.getCurrent();
       return result.ok ? success('lca_release_current_get', result.data) : result;
+    }
+    case 'request_calculation_export':
+    case 'get_calculation_export': {
+      const result = await repository.calculationExport(actor.userId, request);
+      return result.ok ? success('lca_calculation_export', result.data) : result;
     }
     case 'get_calculation_bundle': {
       const result = await repository.getCalculationBundle(request.packageId);
