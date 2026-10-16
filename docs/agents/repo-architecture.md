@@ -29,14 +29,15 @@ checkPaths:
   - scripts/**
   - test.example.http
   - .github/workflows/**
+  - .github/dependabot.yml
   - .github/PULL_REQUEST_TEMPLATE/**
   - .githooks/pre-push
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-16
-lastReviewedCommit: e383a89bc7f0f957e55abd79033d4ce4cbb29b2e
-lastReviewedNote: 'Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs.'
+lastReviewedCommit: fc82dfe3e4000ebc3df822830e1303ef03bff575
+lastReviewedNote: 'Reviewed for Edge #482: the existing secretless CI now covers dependency-input PRs, while discovery, source qualification and hosted deployment remain separate.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -82,6 +83,7 @@ Data Product closure intent admits allocation v3, v4 and v5 and forwards an expl
 | `supabase/functions/deno.json` | stable | Deno config and import map used by local checks and scripted remote deploy bundling |
 | `test.example.http` | stable | checked-in smoke request collection for local and remote routes |
 | `.github/PULL_REQUEST_TEMPLATE/*.md` | stable | M2 branch-specific PR note shape for feature and promote flows |
+| `.github/dependabot.yml` and `.github/workflows/ci.yml` | stable | bounded dependency discovery and the existing secretless canonical gate for dependency-input PRs; detailed scope and coverage limits live in the validation guide |
 
 ## Shared browser preflight policy
 
@@ -107,7 +109,7 @@ This means branch behavior is part of the repo contract, not just a GitHub UI pr
 
 ## Auth And Deploy Architecture
 
-The authoritative runtime/compiler is Deno `2.1.4` and the actual compiler reported by that runtime is TypeScript `5.6.2`. This matches Supabase CLI `2.116.0` -> Edge Runtime `1.74.3` -> Deno `2.1.4`, with each mapping bound to reviewed upstream source evidence. There is no npm TypeScript or format-plugin compiler sidecar. Exact Node `24.19.0` plus pnpm `11.24.0` remain only because the repository still needs the pinned Supabase CLI, non-mutating Prettier, and Node orchestration/contracts. The 159 current function/test roots fit one shared graph-check batch; the runner partitions only after 200 roots. Canonical validation runs 73 Node contract tests and 591 default Deno behavior tests; the credentialed live Upstash test is opt-in and ignored by default.
+The authoritative runtime/compiler is Deno `2.1.4` and the actual compiler reported by that runtime is TypeScript `5.6.2`. This matches Supabase CLI `2.116.0` -> Edge Runtime `1.74.3` -> Deno `2.1.4`, with each mapping bound to reviewed upstream source evidence. There is no npm TypeScript or format-plugin compiler sidecar. Exact Node `24.19.0` plus pnpm `11.24.0` remain only because the repository still needs the pinned Supabase CLI, non-mutating Prettier, and Node orchestration/contracts. Enabled function/test roots share one graph-check batch; the runner partitions only after 200 roots. Canonical validation reports its actual inventory and Node/Deno test counts; the credentialed live Upstash test is opt-in and ignored by default.
 
 Edge #379 removes the final identity-provider client, leaving AWS SDK 3.1121.0 only for SageMaker Runtime. OpenAI 7.8.0, Supabase JSR 2.112.4, Upstash Redis 1.38.3, Deno Redis 0.41.2, Zod 4.5.4, and Prettier 3.9.6 remain exact. Edge #361 makes every Functions JS type import use the mapped alias and rejects JSR, npm, HTTPS, and every alternative direct scheme, so local graph checks and Supabase deployment bundles share exact 2.112.4 resolution. Redis packages remain only for Portal. OpenAI Responses and Chat wrapper shapes remain valid on 7.8. Deno Redis 0.41.2 changed `get`/`eval` typing, so the Portal adapter branches explicitly between Upstash and Standard clients without weakening Lua, timeout, or error semantics.
 
@@ -362,7 +364,7 @@ If one of those changes, assume more than one function family is affected.
 
 ## Local Docpact Push Gate
 
-This repository has a versioned local `pre-push` hook under `.githooks/pre-push` that delegates to `scripts/docpact-gate.sh` and then runs non-mutating `pnpm lint` plus canonical `pnpm check`. The hook aborts if the lint step changes the working tree, so generated formatting changes must be reviewed and committed before push. The gate resolves the CLI through `scripts/docpact`, so local agent shells do not need bare `docpact` on `PATH`. The hook is the local guard for docpact config validation, enforced doc-governance linting, and the complete Edge Function type/behavior gate; the GitHub `CI` workflow is manual-dispatch only.
+This repository has a versioned local `pre-push` hook under `.githooks/pre-push` that delegates to `scripts/docpact-gate.sh` and then runs non-mutating `pnpm lint` plus canonical `pnpm check`. The hook aborts if the lint step changes the working tree, so generated formatting changes must be reviewed and committed before push. The gate resolves the CLI through `scripts/docpact`, so local agent shells do not need bare `docpact` on `PATH`. The hook is the local guard for docpact config validation, enforced doc-governance linting, and the complete Edge Function type/behavior gate. The GitHub `CI` workflow reuses the canonical commands for narrowly scoped dependency-input PRs and manual dispatch, without deployment authority.
 
 Package enqueue accepts optional `import_policy=root_closure_v2`, dispatches it to `svc_tidas_package_import_enqueue_v2`, and rejects unknown policies before RPC. Omission keeps legacy enqueue. Status reads use owner-scoped `svc_tidas_package_read_v2`; `import_progress` contains committed receipt counts. `import_details` uses the existing artifact lifecycle/signing path; Edge performs no dataset validation.
 

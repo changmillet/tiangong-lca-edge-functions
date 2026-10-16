@@ -1,8 +1,8 @@
 version: 1
 layout: repo
 lastReviewedAt: '2026-10-16'
-lastReviewedCommit: 'e383a89bc7f0f957e55abd79033d4ce4cbb29b2e'
-lastReviewedNote: 'Reviewed Worker #320 phase-one calculation/export separation and terminal protection; ownership, branch and production boundaries remain unchanged.'
+lastReviewedCommit: 'fc82dfe3e4000ebc3df822830e1303ef03bff575'
+lastReviewedNote: 'Reviewed Edge #482 dependency monitoring coverage and scoped secretless CI; existing runtime, deployment and source review obligations remain unchanged.'
 
 # Keep deterministic governance facts here.
 # AGENTS.md stays as the repo contract entrypoint.
@@ -42,6 +42,7 @@ ownership:
           - supabase/.env.example
           - test.example.http
           - .github/workflows/ci.yml
+          - .github/dependabot.yml
       ownerRepo: edge-functions
     - id: repo-governance-and-docs
       paths:
@@ -77,6 +78,7 @@ coverage:
     - .github/PULL_REQUEST_TEMPLATE/*.md
     - .github/workflows/ai-doc-lint.yml
     - .github/workflows/ci.yml
+    - .github/dependabot.yml
     - package.json
     - .nvmrc
     - .tool-versions
@@ -571,6 +573,16 @@ rules:
       - path: test.example.http
         mode: review_or_update
     reason: The release command and read projections jointly define actor authorization, service-only artifact verification, and the public immutable download boundary.
+  - id: edge-functions-dependency-monitoring
+    scope: repo
+    repo: edge-functions
+    triggers:
+      - path: .github/dependabot.yml
+        kind: dependency-monitoring
+    requiredDocs:
+      - path: docs/agents/repo-validation.md
+        mode: review_or_update
+    reason: Dependency discovery must preserve M2 routing, security distinctions and explicit coverage limits without changing runtime or deployment authority.
   - id: edge-functions-proof-and-ci-contract
     scope: repo
     repo: edge-functions

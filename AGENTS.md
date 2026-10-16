@@ -33,14 +33,15 @@ checkPaths:
   - test.example.http
   - supabase/.env.example
   - .github/workflows/**
+  - .github/dependabot.yml
   - .github/PULL_REQUEST_TEMPLATE/**
   - .githooks/**
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-16
-lastReviewedCommit: e383a89bc7f0f957e55abd79033d4ce4cbb29b2e
-lastReviewedNote: 'Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs.'
+lastReviewedCommit: fc82dfe3e4000ebc3df822830e1303ef03bff575
+lastReviewedNote: 'Reviewed for Edge #482: scoped secretless dependency PR validation reuses lint/check, and monitoring preserves exact runtime pins, M2 promotion and deployment boundaries.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
@@ -96,6 +97,7 @@ Keep these entry-level facts in `AGENTS.md`. Use `README.md` and `docs/agents/re
 - latest reviewed import graph: AWS SDK `3.1121.0`, OpenAI `7.8.0`, Supabase JSR `2.112.4`, Upstash Redis `1.38.3`, Deno Redis `0.41.2`, Zod `4.5.4`, and Prettier `3.9.6`; every Functions JS type import must use the mapped `@supabase/functions-js/edge-runtime.d.ts` alias, while any direct JSR, npm, HTTPS, or other `@supabase/functions-js` specifier is forbidden; `pnpm outdated` and exact-Deno `deno outdated --latest` must remain empty
 - local serve command: `pnpm start`
 - baseline local validation: non-mutating `pnpm lint` and canonical `pnpm check`
+- dependency-input PRs to `dev` and `main` reuse the secretless `CI` workflow; monitoring scope, security routing and remaining URL/toolchain pins are recorded in `docs/agents/repo-validation.md`
 - `pnpm check` validates exact runtime versions, checks all enabled function/test roots through one bounded shared Deno graph, runs the Node contract tests, and executes the default Deno behavior tests plus one opt-in live Upstash test that remains ignored without explicit credentials
 - schema-boundary regression: `test/schema_boundary_contract_test.ts`
 - formatting fix command: `pnpm format`
@@ -210,4 +212,4 @@ Install the versioned local hook once per checkout:
 ./scripts/install-git-hooks.sh
 ```
 
-The `pre-push` hook runs `scripts/docpact-gate.sh`, which delegates CLI lookup to `scripts/docpact` and performs strict config validation plus enforced lint before the push leaves the machine. It then runs non-mutating `pnpm lint` and canonical `pnpm check` as the local test gate, and aborts if the lint step changes the working tree. The wrapper checks `DOCPACT_BIN`, Cargo install locations, Homebrew install locations, and then `PATH`, so local agent shells should not fail only because bare `docpact` is unavailable. The default comparison base is `origin/dev` for routine branches and `origin/main` for promote or hotfix branches. Override it for unusual stacks with `DOCPACT_BASE_REF=<ref>` or `scripts/docpact-gate.sh --base <ref>`. The gate writes its detailed report to a temporary file so normal pushes do not create `.docpact/runs/` artifacts. The GitHub `CI` workflow is manual-dispatch only.
+The `pre-push` hook runs `scripts/docpact-gate.sh`, which delegates CLI lookup to `scripts/docpact` and performs strict config validation plus enforced lint before the push leaves the machine. It then runs non-mutating `pnpm lint` and canonical `pnpm check` as the local test gate, and aborts if the lint step changes the working tree. The wrapper checks `DOCPACT_BIN`, Cargo install locations, Homebrew install locations, and then `PATH`, so local agent shells should not fail only because bare `docpact` is unavailable. The default comparison base is `origin/dev` for routine branches and `origin/main` for promote or hotfix branches. Override it for unusual stacks with `DOCPACT_BASE_REF=<ref>` or `scripts/docpact-gate.sh --base <ref>`. The gate writes its detailed report to a temporary file so normal pushes do not create `.docpact/runs/` artifacts. The GitHub `CI` workflow supports manual dispatch and narrowly scoped dependency-input PRs.
