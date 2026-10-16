@@ -40,7 +40,7 @@ checkPaths:
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-16
 lastReviewedCommit: e383a89bc7f0f957e55abd79033d4ce4cbb29b2e
-lastReviewedNote: "Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs."
+lastReviewedNote: 'Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
