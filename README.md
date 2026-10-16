@@ -23,9 +23,9 @@ checkPaths:
   - supabase/config.toml
   - supabase/.env.example
   - test.example.http
-lastReviewedAt: 2026-10-10
-lastReviewedCommit: 96586ac7025eed8dc7d0b5c514716985ee43ff3c
-lastReviewedNote: 'Edge #473: reviewed opt-in canonical brand scope and Hybrid V3 request foundation; existing runtime entrypoints, transport and deployment policy remain unchanged.'
+lastReviewedAt: 2026-10-16
+lastReviewedCommit: e383a89bc7f0f957e55abd79033d4ce4cbb29b2e
+lastReviewedNote: 'Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs.'
 ---
 
 # TianGong-LCA-Edge-Functions
@@ -626,3 +626,5 @@ Set `LCA_RELEASE_STORAGE_BUCKET` only when release artifacts should not use the 
 ### Deployment-scoped Portal data
 
 The signed Hybrid V3 and LCIA V2 envelopes carry `allowedBrandCodes` from the Portal server. Deploy compatible Database readers first. These routes use only scoped public RPCs and retain current HMAC/publishable-key configuration. Data brand selection is configured in Portal, independently of visual branding. LCIA cache hits recheck current database qualification. No production activation or business-data backfill is part of the code migration.
+
+Calculation exports are explicit actions on `app_lca_release_commands`: `{ "action": "request_calculation_export", "packageId": "<uuid>" }` defaults to Parquet. Poll with `get_calculation_export`, the same package/format, and optional zero-based `offset` (20 files per page). Polling never enqueues or restarts work. Formats are `parquet`, `csv`, `lcia_xlsx`, `lcia_csv`, `audit`; failed tasks require explicit Worker retry. This requires the paired Database export facade and Worker handler before deployment.

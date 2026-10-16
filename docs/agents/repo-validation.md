@@ -34,9 +34,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-14
-lastReviewedCommit: 1542f289cc1cf7707c207dd8c3b356a9bec215ab
-lastReviewedNote: 'Reviewed Edge #480 replay coverage v2, contract v3 and terminal snapshot enqueue errors. Auth, trusted locators and fail-closed source/count checks remain; legacy evidence remains readable. No hosted deployment.'
+lastReviewedAt: 2026-10-16
+lastReviewedCommit: e383a89bc7f0f957e55abd79033d4ce4cbb29b2e
+lastReviewedNote: 'Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -239,3 +239,5 @@ Run `test/portal_brand_scope_test.ts` with the retained Hybrid contract suite on
 ## Scoped Portal wire qualification
 
 `portal_brand_scope_test.ts`, `portal_hybrid_search_v1_test.ts` and `portal_data_product_results_v1_test.ts` cover canonical signed scope, strict legacy/new wire separation, the exact scoped RPC and parameter, rejection of legacy DTO fallback, and LCIA revalidation before cache expiry. Run `pnpm check` with the repository Node and Deno versions, preserving the existing HMAC, replay/admission, deadlines, provider and publication regressions. Hosted Database/Edge/Portal compatibility, paired brand deployments, cutover and cache invalidation remain separate release receipts; local success is not deployment.
+
+Independent export changes require default-format/read-versus-enqueue tests, terminal-poll reuse, live actor revocation, bounded page signing, canonical audit-path reuse, and invalid binding/size/hash/role rejection. Pair the full Edge lint/check gate with Database admission and actual Worker full-library export proof. No test may obtain production deployment authority from this contract.

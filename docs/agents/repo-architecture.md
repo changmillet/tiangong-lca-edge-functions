@@ -34,9 +34,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-14
-lastReviewedCommit: 6e44717ce85f30574a0926d5f4c3c154ebf5123a
-lastReviewedNote: 'Edge #477: reviewed seven-kind canonical classification admission and Model Hybrid selected-team/state forwarding; Database #838 owns matching/RLS/SQL. Focused 46 and canonical 623 Deno tests pass; no remote deployment occurred. Branch, authorization and integration rules remain unchanged.'
+lastReviewedAt: 2026-10-16
+lastReviewedCommit: e383a89bc7f0f957e55abd79033d4ce4cbb29b2e
+lastReviewedNote: 'Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -385,3 +385,5 @@ The live parser admits explicit Hybrid V3 and rejects scope fields on legacy wir
 LCIA request V2 requires the same signed `allowedBrandCodes`; it calls only `api.portal_get_published_lcia_values_v2`. Browser fields and numeric page V1 stay unchanged. Cache identity includes the exact signed bytes, and a cached numeric payload never skips the current database visibility/publication check. Every read obtains current DB results, including a revocation before the former 60-second cache boundary. No provider credentials, endpoint, HMAC path or ordinary actor route changes. Local checks do not activate any hosted function.
 
 LCIA replay coverage (Worker #320 / Edge #480): new build requests use coverage contract v3 (`snapshot_replay`) and a v3 request identity. Consumers accept matrix v2 only with `lcia-coverage-replay-snapshot:v1`, retaining all source, identity, count and scope checks; matrix v1 still requires legacy JSONL v2. A replay locator identifies private snapshot metadata, never a browser download. Snapshot enqueue accepts only `queued`/`in_progress` as pollable; Database failure/blockage and unexpected modes terminate polling. Deploy compatible consumers and Worker before admitting v3 requests.
+
+Independent calculation exports (Edge #483 / Worker #320) use `request_calculation_export` and `get_calculation_export` on `app_lca_release_commands`. Both recheck the actor-authorized completed package and call the service-only Database export facade with server-authenticated actor identity. Omitted format selects Parquet. Read mode never enqueues. Completed results must match package/job/format/Bundle/manifest bindings and bounded role/name/media/size/count tuples; sign at most 20 members plus the manifest per request. CSV members are independently gzipped, audit members reuse exact canonical paths, and response metadata removes raw locators. Failed/cancelled/blocked export states remain terminal and never change numerical readiness.

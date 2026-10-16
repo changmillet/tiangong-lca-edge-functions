@@ -3,6 +3,7 @@ import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.112.4';
 import type { ActorContext } from '../../command_runtime/actor_context.ts';
 import type { CommandAuditPayload } from '../../command_runtime/audit_log.ts';
 import {
+  callLcaReleaseRpc,
   callCurrentLcaReleaseProcessRpc,
   callCurrentLcaReleaseRpc,
   callLcaReleaseApproveRpc,
@@ -20,6 +21,7 @@ import {
 } from '../../db_rpc/lca_release_commands.ts';
 import { createSupabaseServiceClient } from '../../supabase_client.ts';
 import type {
+  LcaCalculationExportRequest,
   LcaReleaseApproveRequest,
   LcaReleaseArtifactInput,
   LcaReleaseCommandFailure,
@@ -69,6 +71,10 @@ export type LcaReleaseArtifactUpload = LcaReleaseUploadedArtifact & {
 
 export type LcaReleaseCommandRepository = {
   assertManager: () => Promise<LcaReleaseRpcResult>;
+  calculationExport: (
+    actorId: string,
+    request: LcaCalculationExportRequest,
+  ) => Promise<LcaReleaseRpcResult>;
   prepare: (
     request: LcaReleasePrepareRequest,
     audit: CommandAuditPayload,
@@ -647,6 +653,243 @@ async function getCalculationBundle(
   };
 }
 
+async function calculationExport(
+  actorSupabase: LcaReleaseRpcClient,
+  serviceSupabase: SupabaseClient,
+  actorId: string,
+  request: LcaCalculationExportRequest,
+): Promise<LcaReleaseRpcResult> {
+  // Re-check the live actor and package authorization before every status/download request.
+  const source = await callLciaResultCalculationBundleRpc(actorSupabase, request.packageId);
+  if (!source.ok) return source;
+  const sourceBundle = recordValue(recordValue(source.data)?.calculationBundle);
+  const sourcePath = parseStoragePathFromArtifactUrl(stringValue(sourceBundle?.manifestUrl) ?? '');
+  const hash = stringValue(sourceBundle?.bundleContentHash);
+  const calculationId = stringValue(sourceBundle?.calculationId);
+  const suffix = `calculation-bundles/${calculationId}/${hash}/calculation-bundle.json`;
+  if (!sourcePath || !hash?.match(/^[0-9a-f]{64}$/) || !sourcePath.objectPath.endsWith(suffix)) {
+    return failure(
+      'calculation_export_source_invalid',
+      409,
+      'Calculation export source is invalid',
+    );
+  }
+  const rpc = await callLcaReleaseRpc(serviceSupabase, 'svc_lca_calculation_export', {
+    p_requested_by: actorId,
+    p_package_id: request.packageId,
+    p_format: request.format,
+    p_enqueue: request.action === 'request_calculation_export',
+  });
+  if (!rpc.ok) return rpc;
+  const data = recordValue(rpc.data);
+  if (
+    !data ||
+    data.packageId !== request.packageId ||
+    data.format !== request.format ||
+    data.bundleContentHash !== hash ||
+    data.sourceManifestSha256 !== sourceBundle?.manifestSha256
+  ) {
+    return failure(
+      'calculation_export_binding_invalid',
+      502,
+      'Calculation export binding does not match the completed bundle',
+    );
+  }
+  const status = stringValue(data.status);
+  if (
+    !status ||
+    ![
+      'not_requested',
+      'queued',
+      'running',
+      'waiting',
+      'stale',
+      'blocked',
+      'failed',
+      'cancelled',
+      'completed',
+    ].includes(status)
+  ) {
+    return failure(
+      'calculation_export_status_invalid',
+      502,
+      'Calculation export status is invalid',
+    );
+  }
+  // Worker diagnostics can contain private object paths and provider response bodies.
+  // Return only the curated lifecycle projection; full diagnostics stay operator-side.
+  const lifecycle = {
+    packageId: data.packageId,
+    format: data.format,
+    bundleContentHash: data.bundleContentHash,
+    sourceManifestSha256: data.sourceManifestSha256,
+    workerJobId: data.workerJobId,
+    status,
+    progress: data.progress,
+    errorCode: data.errorCode,
+    retryable: data.retryable,
+    nextAction: data.nextAction,
+    errorMessage: ['failed', 'cancelled', 'blocked'].includes(status)
+      ? data.errorCode === 'artifact_too_large'
+        ? 'The export exceeded the configured storage size limit.'
+        : 'The export stopped. Inspect the Worker task before an explicit retry.'
+      : null,
+  };
+  if (status !== 'completed') return { ok: true, data: { ...lifecycle, result: null } };
+  const result = recordValue(data.result);
+  const files = Array.isArray(result?.files) ? result.files : null;
+  const manifest = recordValue(result?.manifest);
+  const jobId = stringValue(data.workerJobId);
+  if (
+    !result ||
+    !files ||
+    files.length > 10000 ||
+    !manifest ||
+    !jobId?.match(/^[0-9a-f-]{36}$/) ||
+    result.workerJobId !== jobId ||
+    result.schemaVersion !== 'lca.calculation_export.result.v1' ||
+    result.packageId !== request.packageId ||
+    result.format !== request.format ||
+    result.bundleContentHash !== hash ||
+    result.sourceManifestSha256 !== sourceBundle?.manifestSha256
+  ) {
+    return failure(
+      'calculation_export_result_invalid',
+      502,
+      'Calculation export result is invalid',
+    );
+  }
+  const prefix =
+    sourcePath.objectPath.slice(0, -suffix.length) + `calculation-exports/${hash}/${jobId}/`;
+  const seen = new Set<string>();
+  const validated: Array<Record<string, unknown>> = [];
+  for (const value of [...files, manifest]) {
+    const file = recordValue(value);
+    const name = stringValue(file?.fileName);
+    const bytes = finiteInteger(file?.byteSize);
+    const count = finiteInteger(file?.recordCount);
+    const storage = parseStoragePathFromArtifactUrl(stringValue(file?.artifactUrl) ?? '');
+    const isManifest = value === manifest;
+    const expected = isManifest
+      ? /^export-manifest\.json$/
+      : {
+          parquet: /^lci-inventory-\d{6}\.parquet$/,
+          csv: /^lci-inventory-\d{6}\.csv\.gz$/,
+          lcia_xlsx: /^lcia-results\.xlsx$/,
+          lcia_csv: /^lcia-results\.csv\.zip$/,
+          audit: /^(calculation-bundle\.json|evidence-\d{6}\.ndjson\.gz)$/,
+        }[request.format];
+    const sourceRelativePath = isManifest
+      ? null
+      : request.format === 'audit'
+        ? (stringValue(file?.sourcePath) ?? 'calculation-bundle.json')
+        : null;
+    const expectedPath =
+      sourceRelativePath === null
+        ? prefix + name
+        : childObjectPath(sourcePath.objectPath, sourceRelativePath);
+    const expectedRole = isManifest
+      ? 'export_manifest'
+      : {
+          parquet: 'lci_inventory_parquet',
+          csv: 'lci_inventory_csv',
+          lcia_xlsx: 'lcia_results_xlsx',
+          lcia_csv: 'lcia_results_csv_zip',
+          audit: 'calculation_evidence_bundle',
+        }[request.format];
+    const expectedGroup = isManifest
+      ? 'advanced_data'
+      : ['lcia_csv', 'lcia_xlsx'].includes(request.format)
+        ? 'results'
+        : request.format === 'audit'
+          ? 'audit_evidence'
+          : 'advanced_data';
+    const expectedMedia =
+      isManifest || name === 'calculation-bundle.json'
+        ? 'application/json'
+        : {
+            parquet: 'application/vnd.apache.parquet',
+            csv: 'application/gzip',
+            lcia_xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            lcia_csv: 'application/zip',
+            audit: 'application/gzip',
+          }[request.format];
+    const maxBytes = isManifest
+      ? 5 * 1024 * 1024
+      : request.format === 'csv'
+        ? 64 * 1024 * 1024
+        : 512 * 1024 * 1024;
+    if (
+      !file ||
+      !name ||
+      !expected.test(name) ||
+      seen.has(name) ||
+      file.schemaVersion !== 'tiangong.calculation-download.v1' ||
+      file.role !== expectedRole ||
+      file.group !== expectedGroup ||
+      file.mediaType !== expectedMedia ||
+      !stringValue(file.sha256)?.match(/^[0-9a-f]{64}$/) ||
+      bytes === null ||
+      bytes <= 0 ||
+      bytes > maxBytes ||
+      count === null ||
+      (!isManifest && request.format === 'csv' && count > 250000) ||
+      !storage ||
+      storage.bucket !== sourcePath.bucket ||
+      storage.objectPath !== expectedPath
+    ) {
+      return failure(
+        'calculation_export_file_invalid',
+        502,
+        'Calculation export contains an invalid or unbounded file',
+      );
+    }
+    seen.add(name);
+    validated.push(file);
+  }
+  // Sign a bounded page; large exports never require thousands of Storage calls in one request.
+  const page = validated.slice(request.offset, Math.min(files.length, request.offset + 20));
+  const signedFiles: Array<Record<string, unknown>> = [];
+  for (const file of [...page, manifest]) {
+    const name = String(file.fileName);
+    const signed = await serviceSupabase.storage
+      .from(sourcePath.bucket)
+      .createSignedUrl(
+        parseStoragePathFromArtifactUrl(String(file.artifactUrl))!.objectPath,
+        LCA_RELEASE_SIGNED_URL_EXPIRES_IN_SECONDS,
+        {
+          download: name,
+        },
+      );
+    if (signed.error || !signed.data?.signedUrl)
+      return failure(
+        'calculation_export_sign_failed',
+        502,
+        'Failed to create an export download URL',
+      );
+    signedFiles.push({
+      ...withoutStorageLocator(file),
+      signedDownloadUrl: signed.data.signedUrl,
+      signedDownloadExpiresInSeconds: LCA_RELEASE_SIGNED_URL_EXPIRES_IN_SECONDS,
+    });
+  }
+  return {
+    ok: true,
+    data: {
+      ...lifecycle,
+      result: {
+        ...withoutStorageLocator(result),
+        files: signedFiles.slice(0, -1),
+        manifest: signedFiles.at(-1),
+        totalFiles: files.length,
+        offset: request.offset,
+        nextOffset:
+          request.offset + page.length < files.length ? request.offset + page.length : null,
+      },
+    },
+  };
+}
+
 function requireExplicitActorClient(client: LcaReleaseRpcClient | null | undefined) {
   if (!client || typeof client.rpc !== 'function') {
     throw new Error('LCA release repository requires an explicit actor Supabase client');
@@ -661,6 +904,8 @@ export function createLcaReleaseCommandRepository(
   const actorClient = requireExplicitActorClient(actorSupabase);
   return {
     assertManager: () => callLcaReleaseManagerAssertionRpc(actorClient),
+    calculationExport: (actorId, request) =>
+      calculationExport(actorClient, serviceSupabase, actorId, request),
     prepare: (request, audit) => callLcaReleasePrepareRpc(actorClient, request, audit),
     getRun: (releaseRunId) => callLcaReleaseRunRpc(actorClient, releaseRunId),
     getCurrent: () => callCurrentLcaReleaseRpc(actorClient),

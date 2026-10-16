@@ -102,7 +102,16 @@ export type LcaReleaseCreateArtifactDownloadRequest = {
   artifactId: string;
 };
 
+export type CalculationExportFormat = 'parquet' | 'csv' | 'lcia_xlsx' | 'lcia_csv' | 'audit';
+export type LcaCalculationExportRequest = {
+  action: 'request_calculation_export' | 'get_calculation_export';
+  packageId: string;
+  format: CalculationExportFormat;
+  offset: number;
+};
+
 export type LcaReleaseCommandRequest =
+  | LcaCalculationExportRequest
   | LcaReleasePrepareRequest
   | LcaReleaseCreateArtifactUploadsRequest
   | LcaReleaseFinalizeArtifactsRequest

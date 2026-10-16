@@ -38,9 +38,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-14
-lastReviewedCommit: 1542f289cc1cf7707c207dd8c3b356a9bec215ab
-lastReviewedNote: 'Reviewed Edge #480 replay coverage v2, contract v3 and terminal snapshot enqueue errors. Auth, trusted locators and fail-closed source/count checks remain; legacy evidence remains readable. No hosted deployment.'
+lastReviewedAt: 2026-10-16
+lastReviewedCommit: e383a89bc7f0f957e55abd79033d4ce4cbb29b2e
+lastReviewedNote: "Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs."
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
