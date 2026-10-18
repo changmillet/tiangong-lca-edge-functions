@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-19
-lastReviewedCommit: 23555fd091355a312d2a3bed6cbaa8c20fe47506
-lastReviewedNote: 'Edge #496: reviewed dual Docker log streams, strict current signed-nonce cancellation events, sanitized request/read/abort receipts and negative controls. One request and the existing poll bounds, runtime behavior and independent cleanup remain unchanged; fresh hosted qualification is still required.'
+lastReviewedCommit: 406be177fef825a7173c21de09abc03ef496bdee
+lastReviewedNote: 'Edge #498: reviewed exact native CLI/Kong startup ordering and the current-launch byte-cursor worker-generation barrier, strict identity, shared bounded observation and negative controls. Functional assertions, runtime/dependency pins and cleanup remain unchanged; fetch cause and fresh hosted qualification remain unresolved.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml

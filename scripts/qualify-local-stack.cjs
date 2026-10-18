@@ -12,6 +12,10 @@ const { boundedBody, waitForFixture } = require('./stack-qualification/http.cjs'
 const { collectFailureDiagnostics } = require('./stack-qualification/diagnostics.cjs');
 const { cancellationEvidence } = require('./stack-qualification/cancellation.cjs');
 const {
+  captureGatewayBaseline,
+  waitForNativeStartup,
+} = require('./stack-qualification/startup.cjs');
+const {
   ownedRelayTarget,
   createOwnedRelay,
   assertLoopbackReleased,
@@ -653,6 +657,12 @@ async function main() {
       runtimeEnvSha256: hash(JSON.stringify(runtimeEnv)),
       images: ledger.images,
     });
+    const gatewayBaselineCommand = ledger.commands.length;
+    const gatewayBaseline = captureGatewayBaseline(
+      kong,
+      docker(['logs', kong.Id], { returnStreams: true, timeout: 1000, maxBuffer: 1024 * 1024 }),
+      { id: kong.Id, name: kongName, image: ledger.images.kong.id, project, network },
+    );
     // Actual CLI serve lifecycle, no fake database prerequisite; source is a disposable fixture.
     const log = fs.openSync(path.join(evidence, 'serve.raw.log'), 'w');
     serve = spawn(
@@ -671,27 +681,55 @@ async function main() {
     );
     fs.closeSync(log);
     persist();
+    write('native-startup-baseline.json', {
+      ...gatewayBaseline.receipt,
+      commandIndex: gatewayBaselineCommand,
+      servePid: serve.pid,
+      preRuntimeId: runtime.Id,
+    });
     const portalUrl = `http://127.0.0.1:${apiPort}/functions/v1/portal`;
-    for (let attempt = 0; attempt < 150; attempt++) {
-      assert.ok(
-        serve.exitCode === null && serve.signalCode === null,
-        'Actual functions serve exited before readiness',
-      );
-      try {
-        const info = JSON.parse(docker(['container', 'inspect', runtimeName]))[0];
-        if (
-          info.Id !== runtime.Id &&
-          info.State.Running &&
-          info.Config.Env.some((v) => v.startsWith('PORTAL_SUPABASE_PUBLISHABLE_KEY='))
-        )
-          break;
-      } catch {
-        /* The owned container is absent during replacement. */
-      }
-      if (attempt === 149)
-        throw new Error('Actual functions serve never replaced the initial runtime');
-      await delay(200);
-    }
+    const startupObservations = [];
+    let probeFirstCommand;
+    await waitForNativeStartup({
+      baseline: gatewayBaseline,
+      runtime: { beforeId: runtime.Id, name: runtimeName, image: ledger.images.runtime.id },
+      alive: () => serve.exitCode === null && serve.signalCode === null,
+      probe(remaining) {
+        // All native/gateway observations share one 1s probe budget.
+        probeFirstCommand = ledger.commands.length;
+        const current = docker(
+          ['container', 'ls', '-aq', '--no-trunc', '--filter', `name=^/${runtimeName}$`],
+          { timeout: remaining() },
+        ).trim();
+        assert.ok(current === '' || /^[a-f0-9]{64}$/u.test(current), 'Ambiguous runtime inventory');
+        const replacing = current !== '' && current !== runtime.Id;
+        const inspected = JSON.parse(
+          docker(['container', 'inspect', kong.Id, ...(replacing ? [current] : [])], {
+            timeout: remaining(),
+          }),
+        );
+        const logs = docker(['logs', kong.Id], {
+          returnStreams: true,
+          timeout: remaining(),
+          maxBuffer: 1024 * 1024,
+        });
+        const serveFile = path.join(evidence, 'serve.raw.log');
+        assert.ok(fs.statSync(serveFile).size <= 1024 * 1024, 'Native startup log limit exceeded');
+        return {
+          kong: inspected[0],
+          runtime: replacing ? inspected[1] : null,
+          logs,
+          serveLog: fs.readFileSync(serveFile, 'utf8'),
+        };
+      },
+      record(observation) {
+        startupObservations.push({
+          ...observation,
+          commandRange: { first: probeFirstCommand, last: ledger.commands.length - 1 },
+        });
+        write('native-startup-observations.json', startupObservations);
+      },
+    });
     await ready(portalUrl, 'native');
     const served = JSON.parse(docker(['container', 'inspect', runtimeName]))[0];
     assert.ok(
