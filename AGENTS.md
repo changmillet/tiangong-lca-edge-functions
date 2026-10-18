@@ -40,8 +40,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 5c9bf5e0878bf38de11aebcffc646afaf9e69cb4
-lastReviewedNote: 'Edges #495/#496: composed the qualified runtime/Zod graph with the source-bound latest CLI/formatter/default-runtime target; hosted gateway/lifecycle qualification and final combined review remain pending.'
+lastReviewedCommit: 8bbe26dbd1a15030c7ec0b60c570f2f62ffb365d
+lastReviewedNote: 'Edges #495/#496: read the complete six-document review-plan set against combined 8bbe26d, corrected composition and observed local-proof descriptions, and bound the hosted workflow to existing governance; hosted gateway/lifecycle execution and independent final review remain pending.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md

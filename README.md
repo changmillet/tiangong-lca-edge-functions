@@ -24,8 +24,8 @@ checkPaths:
   - supabase/.env.example
   - test.example.http
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 5c9bf5e0878bf38de11aebcffc646afaf9e69cb4
-lastReviewedNote: 'Edges #495/#496: composed the qualified runtime/Zod graph with the source-bound latest CLI/formatter/default-runtime target; hosted gateway/lifecycle qualification and final combined review remain pending.'
+lastReviewedCommit: 8bbe26dbd1a15030c7ec0b60c570f2f62ffb365d
+lastReviewedNote: 'Edges #495/#496: read the complete six-document review-plan set against combined 8bbe26d, corrected composition and observed local-proof descriptions, and bound the hosted workflow to existing governance; hosted gateway/lifecycle execution and independent final review remain pending.'
 ---
 
 # TianGong-LCA-Edge-Functions
@@ -487,7 +487,7 @@ Only `OPENAI_API_KEY` is used from the key file. The runner sends fixed syntheti
 
 Provision `HYBRID_OPENAI_CHAT_MODEL=gpt-6-luna` and `PORTAL_OPENAI_CHAT_MODEL=gpt-6-luna` explicitly in each qualified target. Preserve the generic translation model and isolated Portal credentials. Portal V1 cache identity retains the full signed request; V2 retains query/kind reuse. Both bind model/endpoint/embedding identity, reasoning, actual synonym rules and schema, plus the named task-template revision. Update that revision if the task or user prompt template changes. Changed identities miss; old V2 continuations restart before model/database work. No broad Redis deletion is part of migration.
 
-The reviewed Edge #495 runtime dependency baseline pins AWS SDK 3.1152.0, OpenAI 7.38.0, Supabase JS/Functions JS 2.118.0 and Deno Redis 0.42.0, with the explicitly reviewed Zod 4.6.7 extension, on the unchanged Deno 2.1.4 stack. All direct Supabase consumers match that version and Functions JS declarations retain the mapped alias. Unrelated Upstash Redis 1.38.3, Postgres HTTPS, TIDAS SDK 0.4.1 and developer CLI/Prettier pins remain separate. Zod also resolves beneath the unchanged TIDAS SDK 0.4.1 consumer; this is a validator dependency update, not adoption of SDK 0.6.0. Redis dependencies remain only for isolated Portal runtimes. TIDAS package routes enqueue database `worker_jobs`; they do not import the JavaScript TIDAS SDK.
+The reviewed Edge #495 runtime dependency baseline pins AWS SDK 3.1152.0, OpenAI 7.38.0, Supabase JS/Functions JS 2.118.0 and Deno Redis 0.42.0, with the explicitly reviewed Zod 4.6.7 extension, on the unchanged Deno 2.1.4 stack. All direct Supabase consumers match that version and Functions JS declarations retain the mapped alias. Upstash Redis 1.38.3, Postgres HTTPS and TIDAS SDK 0.4.1 remain unchanged. The separately owned Edge #496 developer scope selects CLI 2.121.0 / default Edge Runtime 1.77.4 and Prettier 3.9.10; this candidate normally composes both scopes. Combined local gates and both latest inventories passed; the hosted baseline/candidate stack qualification remains pending. Zod also resolves beneath the unchanged TIDAS SDK 0.4.1 consumer; this is a validator dependency update, not adoption of SDK 0.6.0. Redis dependencies remain only for isolated Portal runtimes. TIDAS package routes enqueue database `worker_jobs`; they do not import the JavaScript TIDAS SDK.
 
 ## Required Development Workflow
 
@@ -507,7 +507,7 @@ Use `pnpm format` only when you intend to rewrite files with Prettier.
 pnpm check
 ```
 
-This canonical gate validates exact runtime versions, one bounded shared 157-root Deno graph, 73 Node contract tests, and 578 default Deno behavior tests; the one credentialed live Upstash test is ignored unless explicitly selected. It intentionally skips the currently disabled `antchain_*` functions. The retired generic non-FT embedding worker and LLM summary webhooks are no longer part of the source inventory; the deterministic `embedding_ft` family remains active.
+This canonical gate validates exact runtime versions, one bounded shared Deno graph, Node contract tests, and default Deno behavior tests, reporting their actual inventory and test counts; the one credentialed live Upstash test is ignored unless explicitly selected. It intentionally skips the currently disabled `antchain_*` functions. The retired generic non-FT embedding worker and LLM summary webhooks are no longer part of the source inventory; the deterministic `embedding_ft` family remains active.
 
 3. Run minimal checks for affected files when you need scoped verification during iteration:
 

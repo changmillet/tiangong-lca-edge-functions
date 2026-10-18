@@ -1,8 +1,8 @@
 version: 1
 layout: repo
 lastReviewedAt: '2026-10-18'
-lastReviewedCommit: '5c9bf5e0878bf38de11aebcffc646afaf9e69cb4'
-lastReviewedNote: 'Edges #495/#496: composed the qualified runtime/Zod graph with the source-bound latest CLI/formatter/default-runtime target; hosted gateway/lifecycle qualification and final combined review remain pending.'
+lastReviewedCommit: '8bbe26dbd1a15030c7ec0b60c570f2f62ffb365d'
+lastReviewedNote: 'Edges #495/#496: read the complete six-document review-plan set against combined 8bbe26d, corrected composition and observed local-proof descriptions, and bound the hosted workflow to existing governance; hosted gateway/lifecycle execution and independent final review remain pending.'
 
 # Keep deterministic governance facts here.
 # AGENTS.md stays as the repo contract entrypoint.
@@ -42,6 +42,7 @@ ownership:
           - supabase/.env.example
           - test.example.http
           - .github/workflows/ci.yml
+          - .github/workflows/stack-qualification.yml
           - .github/dependabot.yml
       ownerRepo: edge-functions
     - id: repo-governance-and-docs
@@ -78,6 +79,7 @@ coverage:
     - .github/PULL_REQUEST_TEMPLATE/*.md
     - .github/workflows/ai-doc-lint.yml
     - .github/workflows/ci.yml
+    - .github/workflows/stack-qualification.yml
     - .github/dependabot.yml
     - package.json
     - .nvmrc
@@ -302,6 +304,7 @@ routing:
         - scripts/run_scope_closure_edge_qualification.sh
         - scripts/scope_closure_edge_qualification.ts
         - .github/workflows/ci.yml
+        - .github/workflows/stack-qualification.yml
         - docs/agents/repo-validation.md
         - test.example.http
     repo-docs:
@@ -598,6 +601,8 @@ rules:
       - path: scripts/scope_closure_edge_qualification.ts
         kind: qualification-adapter
       - path: .github/workflows/ci.yml
+        kind: automation
+      - path: .github/workflows/stack-qualification.yml
         kind: automation
     requiredDocs:
       - path: .docpact/config.yaml
