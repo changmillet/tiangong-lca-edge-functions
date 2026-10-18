@@ -143,6 +143,25 @@ test('byte cursor rejects missing, rewritten, truncated or cross-stream history 
     streams(complete + loaded(99)),
     streams(line(1, 'start worker process 20')),
     streams(complete.replace('1#0: signal 1', '2#0: signal 1')),
+    streams(complete + line(1, 'worker process 10 exited with code 0')),
+    streams(complete + loaded(20)),
+    streams(
+      complete
+        .replace('start worker process 20', 'start worker process 1')
+        .replace(loaded(20), loaded(1)),
+    ),
+    streams(
+      hup +
+        line(1, 'worker process 10 exited with code 0') +
+        line(1, 'start worker process 20') +
+        loaded(20),
+    ),
+    streams(
+      hup.replace(line(1, 'reconfiguring'), '') +
+        line(1, 'start worker process 20') +
+        loaded(20) +
+        line(1, 'worker process 10 exited with code 0'),
+    ),
   ])
     assert.throws(() => gatewayGeneration(base, container(), value, ''));
   assert.equal(

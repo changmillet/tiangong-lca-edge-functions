@@ -36,7 +36,7 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-19
-lastReviewedCommit: 406be177fef825a7173c21de09abc03ef496bdee
+lastReviewedCommit: fdd4bb1bd467c605d35725e37e87061909698740
 lastReviewedNote: 'Edge #498: reviewed exact native CLI/Kong startup ordering and the current-launch byte-cursor worker-generation barrier, strict identity, shared bounded observation and negative controls. Functional assertions, runtime/dependency pins and cleanup remain unchanged; fetch cause and fresh hosted qualification remain unresolved.'
 related:
   - ../../AGENTS.md

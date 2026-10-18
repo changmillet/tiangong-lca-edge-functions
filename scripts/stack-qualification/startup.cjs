@@ -124,7 +124,8 @@ function captureGatewayBaseline(info, streams, expected) {
   const worker = starts[0].worker;
   requireFact(
     starts[0].pid === master &&
-      events.some((event) => event.type === 'loaded' && event.pid === worker) &&
+      worker !== master &&
+      events.filter((event) => event.type === 'loaded' && event.pid === worker).length === 1 &&
       events.every((event) => event.pid === (event.type === 'loaded' ? worker : master)) &&
       events.every((event) => event.stream === banners[0].stream),
     'gateway_baseline_not_loaded',
@@ -165,11 +166,16 @@ function gatewayGeneration(baseline, info, streams, serveLog) {
   const hups = events.filter((event) => event.type === 'hup');
   const batches = events.filter((event) => event.type === 'batch');
   const starts = events.filter((event) => event.type === 'start');
+  const configurations = events.filter((event) => event.type === 'reconfigure');
+  const loads = events.filter((event) => event.type === 'loaded');
+  const exits = events.filter((event) => event.type === 'exit');
   requireFact(
     hups.length <= 1 &&
       batches.length <= 1 &&
       starts.length <= 1 &&
-      events.filter((event) => event.type === 'reconfigure').length <= 1,
+      configurations.length <= 1 &&
+      loads.length <= 1 &&
+      exits.length <= 1,
     'gateway_extra_generation',
   );
   requireFact(hups.length || events.length === 0, 'gateway_event_order_unexpected');
@@ -179,14 +185,17 @@ function gatewayGeneration(baseline, info, streams, serveLog) {
       .every((event) => event.pid === baseline.master),
     'gateway_master_changed',
   );
-  for (const event of events.filter((event) => event.type === 'exit')) {
+  for (const event of exits) {
     requireFact(
       event.worker === baseline.worker && event.code === 0,
       'gateway_worker_exit_unexpected',
     );
   }
   const worker = starts[0]?.worker;
-  requireFact(!worker || worker !== baseline.worker, 'gateway_worker_reused');
+  requireFact(
+    !worker || (worker !== baseline.worker && worker !== baseline.master),
+    'gateway_worker_reused',
+  );
   requireFact(
     !worker ||
       events.filter((event) => event.type === 'loaded').every((event) => event.pid === worker),
@@ -195,7 +204,12 @@ function gatewayGeneration(baseline, info, streams, serveLog) {
   const loaded = worker && events.some((event) => event.type === 'loaded' && event.pid === worker);
   const reaped = events.some((event) => event.type === 'exit' && event.worker === baseline.worker);
   requireFact(
-    !hups.length || events.every((event) => event.offset >= hups[0].offset),
+    (!hups.length || events.every((event) => event.offset >= hups[0].offset)) &&
+      (!batches.length ||
+        (configurations.length === 1 && batches[0].offset > configurations[0].offset)) &&
+      (!starts.length || (batches.length === 1 && starts[0].offset > batches[0].offset)) &&
+      loads.every((event) => batches.length === 1 && event.offset > batches[0].offset) &&
+      exits.every((event) => starts.length === 1 && event.offset > starts[0].offset),
     'gateway_event_order_unexpected',
   );
   const ready =
