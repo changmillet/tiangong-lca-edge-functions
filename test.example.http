@@ -1,3 +1,5 @@
+# Edge #495 runtime SDK review: existing request payloads, JWT/API-key boundaries
+# and response examples are unchanged; synthetic wire proof does not invoke these endpoints.
 # Edge #357 dependency review: the latest runtime import graph changes no endpoint,
 # authentication header, request payload, or response example in this collection.
 # Edge #361 pin review: the Functions JS type-only alias normalization changes no
