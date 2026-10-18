@@ -37,7 +37,7 @@ checkPaths:
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
 lastReviewedCommit: ebdc3631976c56db8382fd8602fd5ca2730852bc
-lastReviewedNote: 'Reviewed for Edge #482: the existing secretless CI now covers dependency-input PRs, while discovery, source qualification and hosted deployment remain separate.'
+lastReviewedNote: 'Edge #492: reviewed opaque artifact identifiers, trusted digest and snapshot/method identity checks, and regression proof; auth, deployment and runtime dependencies are unchanged.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
