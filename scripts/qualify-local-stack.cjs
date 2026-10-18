@@ -10,6 +10,7 @@ const { execFileSync, spawn, spawnSync } = require('node:child_process');
 const { terminateOwnedGroup } = require('./stack-qualification/process.cjs');
 const { boundedBody, waitForFixture } = require('./stack-qualification/http.cjs');
 const { collectFailureDiagnostics } = require('./stack-qualification/diagnostics.cjs');
+const { cancellationEvidence } = require('./stack-qualification/cancellation.cjs');
 const {
   ownedRelayTarget,
   createOwnedRelay,
@@ -117,6 +118,7 @@ async function main() {
       ...['d', 'p', 'q', 'dp', 'dq', 'qi'].map((key) => asymmetric.signingKey[key]).filter(Boolean),
     ].reduce((s, key) => s.replaceAll(key, `[synthetic:${hash(key).slice(0, 12)}]`), value);
   function run(command, args, options = {}) {
+    const { returnStreams = false, ...spawnOptions } = options;
     const index = ledger.commands.length;
     const started = Date.now();
     try {
@@ -126,7 +128,7 @@ async function main() {
         encoding: 'utf8',
         timeout: 180000,
         maxBuffer: 20 * 1024 * 1024,
-        ...options,
+        ...spawnOptions,
       });
       const output = child.stdout ?? '';
       fs.writeFileSync(
@@ -149,7 +151,7 @@ async function main() {
         stdoutSha256: hash(output),
       });
       persist();
-      return output;
+      return returnStreams ? { stdout: output, stderr: child.stderr ?? '' } : output;
     } catch (error) {
       const output = `${error.stdout ?? ''}\n${error.stderr ?? ''}`;
       fs.writeFileSync(path.join(evidence, `command-${index}.log`), redact(output));
@@ -831,30 +833,65 @@ async function main() {
       'x-fixture-stream': 'true',
     });
     const abort = new AbortController();
-    const response = await fetch(pairUrl, {
+    // The nonce is public request identity. Never persist the signed headers or keys.
+    const cancellationRequest = {
+      nonce: headers['x-portal-nonce'],
+      fetchStarted: false,
+      responseStatus: null,
+      readCompleted: false,
+      firstReadDone: null,
+      firstReadBytes: null,
+      abortCalled: false,
+      signalAborted: false,
+      readerCancelSettled: false,
+      readerCancelRejected: false,
+    };
+    const recordCancellationRequest = () => write('cancellation-request.json', cancellationRequest);
+    recordCancellationRequest();
+    const pendingResponse = fetch(pairUrl, {
       method: 'POST',
       headers,
       body: cancelBody,
       signal: abort.signal,
     });
+    cancellationRequest.fetchStarted = true;
+    recordCancellationRequest();
+    const response = await pendingResponse;
+    cancellationRequest.responseStatus = response.status;
+    recordCancellationRequest();
     assert.equal(response.status, 200);
     const reader = response.body.getReader();
-    assert.equal((await reader.read()).done, false);
+    const first = await reader.read();
+    cancellationRequest.readCompleted = true;
+    cancellationRequest.firstReadDone = first.done;
+    cancellationRequest.firstReadBytes = first.value?.byteLength ?? 0;
+    recordCancellationRequest();
+    assert.equal(first.done, false);
     abort.abort();
-    await reader.cancel().catch(() => {});
-    let cancellation = '';
+    cancellationRequest.abortCalled = true;
+    cancellationRequest.signalAborted = abort.signal.aborted;
+    recordCancellationRequest();
+    await reader.cancel().catch(() => {
+      cancellationRequest.readerCancelRejected = true;
+    });
+    cancellationRequest.readerCancelSettled = true;
+    recordCancellationRequest();
+    let cancellation;
     for (let i = 0; i < 50; i++) {
-      cancellation = docker(['logs', pairRuntime]);
-      if (
-        cancellation.includes('stack.request.abort') &&
-        cancellation.includes('stack.response.cancel')
-      )
-        break;
+      const streams = docker(['logs', pairRuntime], { returnStreams: true });
+      cancellation = cancellationEvidence(streams, headers['x-portal-nonce']);
+      write('cancellation-events.json', {
+        poll: i + 1,
+        commandIndex: ledger.commands.length - 1,
+        stdoutSha256: hash(streams.stdout),
+        stderrSha256: hash(streams.stderr),
+        ...cancellation,
+      });
+      if (cancellation.requestAbort && cancellation.responseCancel) break;
       await delay(100);
     }
     assert.ok(
-      cancellation.includes('stack.request.abort') &&
-        cancellation.includes('stack.response.cancel'),
+      cancellation.requestAbort && cancellation.responseCancel,
       'Actual worker cancellation evidence missing',
     );
     ledger.outcomes.push({ case: 'worker-cancellation', requestAbort: true, responseCancel: true });

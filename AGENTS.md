@@ -40,8 +40,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-19
-lastReviewedCommit: bc7cc43ec14a7744e47f7c11d600d63835110b28
-lastReviewedNote: 'Edge #496: reviewed failed/timeout diagnostic inspection as unknown rather than absence, identity-bound successful presence and negative controls. Primary failures, functional assertions and independent cleanup remain unchanged; actual hosted qualification is still pending.'
+lastReviewedCommit: 23555fd091355a312d2a3bed6cbaa8c20fe47506
+lastReviewedNote: 'Edge #496: reviewed dual Docker log streams, strict current signed-nonce cancellation events, sanitized request/read/abort receipts and negative controls. One request and the existing poll bounds, runtime behavior and independent cleanup remain unchanged; fresh hosted qualification is still required.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
