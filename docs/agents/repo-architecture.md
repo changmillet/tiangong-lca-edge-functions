@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 523a279996ec9398b947da6cbcb1caa96491c6e1
-lastReviewedNote: 'Reviewed Edge #491 at 523a279: changing only the reviewed pnpm setup Action preserves source layout, runtime/provider boundaries, canonical validation and explicit deployment entrypoints.'
+lastReviewedCommit: '84a0b8411c4b4aa9a8a8d682637966c5f86b2a0a'
+lastReviewedNote: 'Edge #492: reviewed opaque artifact identities and preserved integrity checks on the #491 pnpm setup baseline; runtime pins, auth and explicit deployment boundaries remain unchanged.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -299,7 +299,7 @@ Rollout dependency: deploy the compatible Worker producer and build new `ready` 
 
 Support datasets are unaffected: flows, flowproperties, unitgroups, sources, contacts, and lifecyclemodels keep their own state rules, and the TIDAS package export open-data range stays a support-dataset rule rather than a numerical one.
 
-`lca_query_results` keeps historical `all-unit-query:v1` matrix reads and consumes `all-unit-query:v2` as a bounded index over Calculation Bundle LCIA chunks. The v2 path verifies the persisted query-index size and SHA-256, keeps child paths inside the referenced bundle, and validates each downloaded gzip chunk's size, SHA-256, process range, record count, method identity, ordering, and finite values before returning a row or hotspot projection. It loads only the covering chunks for selected queries and processes full-hotspot chunks sequentially instead of rebuilding the removed full H matrix.
+`lca_query_results` keeps historical `all-unit-query:v1` matrix reads and consumes `all-unit-query:v2` as a bounded index over Calculation Bundle LCIA chunks. The v2 path verifies the persisted query-index size and SHA-256, keeps child paths inside the referenced bundle, and validates each downloaded gzip chunk's size, SHA-256, process range, record count, method identity, ordering, and finite values before returning a row or hotspot projection. It loads only the covering chunks for selected queries and processes full-hotspot chunks sequentially instead of rebuilding the removed full H matrix. Query-reader task, calculation and method IDs are opaque nonempty strings; the reader imposes no UUID version/variant requirement. Persisted query-index digests bind the full document, including its task and bundle references; snapshot equality and exact method/version axis membership remain required.
 
 Data Product package preview shares that strict v1/v2 artifact reader. Historical v1 packages retain inline-matrix compatibility; current v2 packages verify the durable query-index size and SHA-256 and read only the LCIA chunks covering the requested result page and selected impact category. Package preview must not require an inline `h_matrix` from v2 or reconstruct the complete result matrix in Edge.
 

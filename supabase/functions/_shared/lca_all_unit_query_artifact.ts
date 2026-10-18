@@ -1,4 +1,3 @@
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_RE = /^[0-9a-f]{64}$/i;
 
 export const ALL_UNIT_QUERY_V1_FORMAT = 'all-unit-query:v1';
@@ -103,7 +102,7 @@ export function parseAllUnitQueryArtifact(
   }
 
   const snapshotId = stringField(document, 'snapshot_id') || stringField(document, 'snapshotId');
-  if (snapshotId !== options.snapshotId) {
+  if (!snapshotId || !options.snapshotId || snapshotId !== options.snapshotId) {
     return { ok: false, error: 'query_artifact_snapshot_mismatch' };
   }
 
@@ -161,8 +160,10 @@ export function parseAllUnitQueryArtifact(
   const jobId = stringField(document, 'jobId');
   const processCount = numberField(document, 'processCount');
   const impactCount = numberField(document, 'impactCount');
-  if (!UUID_RE.test(jobId)) {
-    return invalid('v2 jobId is invalid');
+  // IDs are opaque references. Trust comes from the caller-verified artifact digest
+  // and snapshot/method binding, not UUID version or variant bits.
+  if (!jobId) {
+    return invalid('v2 jobId is missing');
   }
   if (processCount !== options.processCount || impactCount !== expectedImpactCount) {
     return invalid('v2 artifact axis count mismatch');
@@ -438,7 +439,7 @@ function parseCalculationBundleRef(raw: unknown): AllUnitQueryResult<Calculation
   };
   if (
     parsed.schemaVersion !== CALCULATION_BUNDLE_SCHEMA_VERSION ||
-    !UUID_RE.test(parsed.calculationId) ||
+    !parsed.calculationId ||
     !SHA256_RE.test(parsed.bundleContentHash) ||
     !parsed.manifestUrl ||
     !SHA256_RE.test(parsed.manifestSha256) ||
@@ -492,7 +493,8 @@ function validateImpactAxis(
     const version = String(impact.impact_version ?? '').trim();
     if (
       impact.impact_index !== index ||
-      !UUID_RE.test(impact.impact_id) ||
+      typeof impact.impact_id !== 'string' ||
+      !impact.impact_id.trim() ||
       (requireVersion && !version) ||
       identities.has(impactIdentity(impact.impact_id, version))
     ) {

@@ -40,8 +40,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 523a279996ec9398b947da6cbcb1caa96491c6e1
-lastReviewedNote: 'Reviewed Edge #491 at 523a279: pnpm setup v3.1.1 qualifies the existing CI inputs without changing exact Deno/TypeScript, auxiliary tooling, runtime imports, permissions, M2 delivery or deployment authority.'
+lastReviewedCommit: '84a0b8411c4b4aa9a8a8d682637966c5f86b2a0a'
+lastReviewedNote: 'Edge #492: reviewed opaque artifact identities and preserved integrity checks on the #491 pnpm setup baseline; runtime pins, auth and explicit deployment boundaries remain unchanged.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
