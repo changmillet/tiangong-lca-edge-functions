@@ -519,7 +519,7 @@ async function main() {
     const apiPort = await freePort();
     const dbPort = await freePort();
     const shadowPort = await freePort();
-    const config = `project_id = "${project}"\n[api]\nport = ${apiPort}\n[db]\nport = ${dbPort}\nshadow_port = ${shadowPort}\nmajor_version = 17\n[db.seed]\nenabled = false\n[auth]\nenabled = false\njwt_secret = "${synthetic.secret}"\nsigning_keys_path = "./signing-keys.json"\npublishable_key = "${synthetic.publishable}"\nsecret_key = "${synthetic.service}"\nanon_key = "${anon}"\nservice_role_key = "${serviceRole}"\n[edge_runtime]\nenabled = true\ndeno_version = 2\n[functions.portal]\nverify_jwt = false\n[functions.jwt]\nverify_jwt = true\n`;
+    const config = `project_id = "${project}"\n[api]\nport = ${apiPort}\n[db]\nport = ${dbPort}\nshadow_port = ${shadowPort}\nmajor_version = 17\n[db.seed]\nenabled = false\n[auth]\nenabled = true\njwt_secret = "${synthetic.secret}"\nsigning_keys_path = "./signing-keys.json"\npublishable_key = "${synthetic.publishable}"\nsecret_key = "${synthetic.service}"\nanon_key = "${anon}"\nservice_role_key = "${serviceRole}"\n[edge_runtime]\nenabled = true\ndeno_version = 2\n[functions.portal]\nverify_jwt = false\n[functions.jwt]\nverify_jwt = true\n`;
     fs.writeFileSync(path.join(supabase, 'config.toml'), config);
     fs.writeFileSync(
       path.join(supabase, 'signing-keys.json'),

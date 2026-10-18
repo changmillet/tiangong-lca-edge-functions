@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 92033b7d2a54dc143c8eade6e5c49e06f0d258e1
-lastReviewedNote: 'Edge #496: reviewed the source-backed internal-network publishing failure, exact owned endpoint TCP relays, byte/half-close/backpressure/abort tests, bounded DB startup capture and listener cleanup. All networks remain internal; native CLI and both hosted functional variants remain mandatory and pending.'
+lastReviewedCommit: 4832bfd28463be210abc07f306bc96b9656f7b91
+lastReviewedNote: 'Edge #496: reviewed the actual native TypeScript CLI routes, auth-enabled signing-key loading with gotrue excluded, generated RSA/public-only JWKS invariants and producer regression. Both native starts passed at 4832bfd; complete hosted lifecycle and functional/cancellation proof remain mandatory and pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml

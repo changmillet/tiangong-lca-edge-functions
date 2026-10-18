@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 92033b7d2a54dc143c8eade6e5c49e06f0d258e1
-lastReviewedNote: 'Edge #496: reviewed the source-backed internal-network publishing failure, exact owned endpoint TCP relays, byte/half-close/backpressure/abort tests, bounded DB startup capture and listener cleanup. All networks remain internal; native CLI and both hosted functional variants remain mandatory and pending.'
+lastReviewedCommit: 4832bfd28463be210abc07f306bc96b9656f7b91
+lastReviewedNote: 'Edge #496: reviewed the actual native TypeScript CLI routes, auth-enabled signing-key loading with gotrue excluded, generated RSA/public-only JWKS invariants and producer regression. Both native starts passed at 4832bfd; complete hosted lifecycle and functional/cancellation proof remain mandatory and pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -280,6 +280,8 @@ The selected developer target is Prettier 3.9.10 / Supabase CLI 2.121.0, whose d
 `Local stack qualification` stages public packages/images on an owned Docker-enabled Linux runner, verifies the installed CLI binary against its official platform tarball and all source blobs, then runs baseline CLI 2.116.0 / Runtime 1.74.3 and candidate CLI 2.121.0 / Runtime 1.77.4 separately. The real CLI starts a disposable local DB/Kong/Edge fixture, selects `functions serve --no-verify-jwt --env-file`, exits serve, and stops with `--no-backup`. No real project link, user environment, provider or business database is used. HOME is preserved and configuration/cache roots are owned.
 
 The workflow initializes its isolated root in a runner step using the quoted `RUNNER_TEMP` value and `GITHUB_ENV`, so the driver, always-run recovery and artifact upload share one path. GitHub does not allow the `runner` context in job-level `env`; validate workflow expression contexts before scheduling the matrix. An invalid workflow with zero jobs is no CLI/runtime execution evidence.
+
+Both selected native TypeScript CLI start routes read `auth.signing_keys_path` only when `auth.enabled=true`. The synthetic fixture enables that configuration and keeps `gotrue` explicitly excluded, so the generated RSA file supplies the actual runtime JWKS without starting the Auth service. Preserve the generated key ID, public-only JWKS check and valid/bad/expired JWT assertions. Both hosted variants must execute these checks successfully.
 
 Docker 28 internal bridges do not publish host ports. All fixture networks remain internal, and host CLI/client traffic uses loopback-only opaque TCP relays to the exact UUID-labelled container ID and sole internal network/IP. The relay binds its first verified endpoint and rejects replacement, preserves bytes/backpressure/half-close/abort, has bounded idle/lifetime limits, and records counters plus closed listeners. Internal and independent recovery both verify port release. Startup captures bounded owned DB state/port mappings and sanitized logs before CLI failure can remove the container. Native CLI start/serve/stop and all gateway/cancellation assertions remain required; a relay does not replace those proofs.
 

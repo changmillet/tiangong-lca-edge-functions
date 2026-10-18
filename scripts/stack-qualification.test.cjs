@@ -157,3 +157,43 @@ test('synthetic gateway tokens verify only against their own public RS256 JWK', 
   );
   assert.equal(keys.publicKey.d, undefined);
 });
+
+// Both selected CLI versions ignore signing_keys_path when auth is disabled.
+// Render the actual producer template so a public-key assertion cannot be
+// accidentally disconnected from its input while Auth stays excluded.
+test('fixture loads its configured signing key while excluding the Auth service', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'qualify-local-stack.cjs'), 'utf8');
+  const template = source.match(/const config = (`[^`]+`);/u)?.[1];
+  assert.ok(template, 'Actual CLI fixture config template is missing');
+  const config = require('node:vm').runInNewContext(
+    template,
+    {
+      project: 'ownedfixture',
+      apiPort: 54321,
+      dbPort: 54322,
+      shadowPort: 54320,
+      synthetic: {
+        secret: 'synthetic-secret',
+        publishable: 'synthetic-public',
+        service: 'synthetic-service',
+      },
+      anon: 'synthetic-anon',
+      serviceRole: 'synthetic-role',
+    },
+    { timeout: 1000 },
+  );
+  const auth = config.match(/\[auth\]\n([\s\S]*?)(?=\n\[|$)/u)?.[1];
+  assert.ok(auth);
+  assert.match(
+    auth,
+    /^enabled = true$/mu,
+    'The real CLI must read the configured RSA signing file',
+  );
+  assert.match(auth, /^signing_keys_path = "\.\/signing-keys\.json"$/mu);
+  const excludes = source.match(/const excludes =\s*'([^']+)';/u)?.[1].split(',');
+  assert.ok(excludes?.includes('gotrue'), 'Auth configuration must not start the Auth service');
+  assert.match(
+    source,
+    /cli\(\['start', '--debug', '--exclude', excludes, '--network-id', network\]\)/u,
+  );
+});
