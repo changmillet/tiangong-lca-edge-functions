@@ -1,5 +1,6 @@
 import { assertEquals } from 'jsr:@std/assert';
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.112.4';
+import { createClient } from 'jsr:@supabase/supabase-js@2.118.0';
+import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 
 import {
   executeReviewerContactCommand,
@@ -116,3 +117,122 @@ Deno.test('reviewer contact activation rejects invalid contact before RPC', asyn
   if (!result.ok) assertEquals(result.code, 'REVIEWER_CONTACT_INVALID');
   assertEquals(client.calls.length, 0);
 });
+
+Deno.test(
+  'real SDK Contact Unicode and timestamp validation gates the actual RPC transport',
+  async () => {
+    const calls: Array<{ url: string; body: unknown }> = [];
+    const supabase = createClient('http://127.0.0.1:54321', 'synthetic-contact-key', {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      global: {
+        fetch: async (input, init) => {
+          const request = new Request(input, init);
+          calls.push({ url: request.url, body: await request.json() });
+          return Response.json({ ok: true, data: { bound: true } });
+        },
+      },
+    });
+    const contactActor = { userId: USER_ID, accessToken: 'synthetic-contact-token', supabase };
+    const request: Parameters<typeof executeReviewerContactCommand>[0] = {
+      mode: 'create',
+      id: CONTACT_ID,
+      operationId: OPERATION_ID,
+      jsonOrdered: {},
+    };
+    const minuteOnly = structuredClone(validContact);
+    minuteOnly.contactDataSet.administrativeInformation.dataEntryBy['common:timeStamp'] =
+      '2026-10-18T01:02Z';
+    const invalid = await executeReviewerContactCommand(
+      { ...request, jsonOrdered: minuteOnly },
+      contactActor,
+    );
+    assertEquals(invalid, {
+      ok: false,
+      code: 'REVIEWER_CONTACT_INVALID',
+      message: 'Reviewer profile data validation failed',
+      status: 400,
+      details: [
+        {
+          code: 'invalid_format',
+          path: ['contactDataSet', 'administrativeInformation', 'dataEntryBy', 'common:timeStamp'],
+          params: { format: 'datetime' },
+          severity: 'error',
+          message: 'Invalid ISO datetime',
+          rawCode: 'invalid_format',
+        },
+      ],
+    });
+    assertEquals(calls, []);
+
+    const oversized = structuredClone(validContact);
+    oversized.contactDataSet.contactInformation.dataSetInformation['common:shortName'][0]['#text'] =
+      '😀'.repeat(501);
+    const oversizedResult = await executeReviewerContactCommand(
+      { ...request, jsonOrdered: oversized },
+      contactActor,
+    );
+    assertEquals(oversizedResult.ok, false);
+    if (!oversizedResult.ok) assertEquals(oversizedResult.code, 'REVIEWER_CONTACT_INVALID');
+    assertEquals(calls, []);
+
+    const accepted = structuredClone(validContact);
+    accepted.contactDataSet.contactInformation.dataSetInformation['common:shortName'][0]['#text'] =
+      '😀'.repeat(500);
+    accepted.contactDataSet.administrativeInformation.dataEntryBy['common:timeStamp'] =
+      '2026-10-18T01:02:03Z';
+    const original = structuredClone(accepted);
+    const result = await executeReviewerContactCommand(
+      { ...request, jsonOrdered: accepted },
+      contactActor,
+    );
+    assertEquals(result.ok, true);
+    const expectedPayload = {
+      ...original,
+      contactDataSet: {
+        ...original.contactDataSet,
+        contactInformation: {
+          ...original.contactDataSet.contactInformation,
+          dataSetInformation: {
+            ...original.contactDataSet.contactInformation.dataSetInformation,
+            'common:synonyms': [],
+            'common:generalComment': [],
+          },
+        },
+        administrativeInformation: {
+          ...original.contactDataSet.administrativeInformation,
+          publicationAndOwnership: {
+            ...original.contactDataSet.administrativeInformation.publicationAndOwnership,
+            'common:referenceToOwnershipOfDataSet': {
+              '@refObjectId': CONTACT_ID,
+              '@type': 'contact data set',
+              '@uri': `../contacts/${CONTACT_ID}.xml`,
+              '@version': '01.00.000',
+              'common:shortDescription':
+                original.contactDataSet.contactInformation.dataSetInformation['common:shortName'],
+            },
+          },
+        },
+      },
+    };
+    assertEquals(calls, [
+      {
+        url: 'http://127.0.0.1:54321/rest/v1/rpc/cmd_review_contact_activate',
+        body: {
+          p_mode: 'create',
+          p_id: CONTACT_ID,
+          p_json_ordered: expectedPayload,
+          p_operation_id: OPERATION_ID,
+          p_source_version: null,
+          p_bind: true,
+          p_expected_contact: null,
+          p_audit: {
+            command: 'review_contact_activate',
+            actorUserId: USER_ID,
+            sdkVersion: '0.4.1',
+          },
+        },
+      },
+    ]);
+    assertEquals(accepted, original);
+  },
+);

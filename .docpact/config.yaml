@@ -1,8 +1,8 @@
 version: 1
 layout: repo
-lastReviewedAt: '2026-10-18'
-lastReviewedCommit: '84a0b8411c4b4aa9a8a8d682637966c5f86b2a0a'
-lastReviewedNote: 'Edge #492: reviewed opaque artifact identities and preserved integrity checks on the #491 pnpm setup baseline; runtime pins, auth and explicit deployment boundaries remain unchanged.'
+lastReviewedAt: '2026-10-19'
+lastReviewedCommit: '23555fd091355a312d2a3bed6cbaa8c20fe47506'
+lastReviewedNote: 'Edge #496: reviewed dual Docker log streams, strict current signed-nonce cancellation events, sanitized request/read/abort receipts and negative controls. One request and the existing poll bounds, runtime behavior and independent cleanup remain unchanged; fresh hosted qualification is still required.'
 
 # Keep deterministic governance facts here.
 # AGENTS.md stays as the repo contract entrypoint.
@@ -42,6 +42,7 @@ ownership:
           - supabase/.env.example
           - test.example.http
           - .github/workflows/ci.yml
+          - .github/workflows/stack-qualification.yml
           - .github/dependabot.yml
       ownerRepo: edge-functions
     - id: repo-governance-and-docs
@@ -78,6 +79,7 @@ coverage:
     - .github/PULL_REQUEST_TEMPLATE/*.md
     - .github/workflows/ai-doc-lint.yml
     - .github/workflows/ci.yml
+    - .github/workflows/stack-qualification.yml
     - .github/dependabot.yml
     - package.json
     - .nvmrc
@@ -164,8 +166,8 @@ routing:
         - scripts/cleanup-portal-r0-fixture.cjs
         - scripts/cleanup-portal-r0-fixture.test.cjs
         - scripts/run-portal-upstash-live-fixture.cjs
-        - test/fixtures/supabase-cli-v2.116.0-functions-transport.json
-        - test/fixtures/supabase-edge-runtime-v1.74.3-deno.json
+        - test/fixtures/supabase-cli-v2.121.0-functions-transport.json
+        - test/fixtures/supabase-edge-runtime-v1.77.4-deno.json
         - supabase/.env.example
         - README.md
         - docs/agents/repo-architecture.md
@@ -302,6 +304,7 @@ routing:
         - scripts/run_scope_closure_edge_qualification.sh
         - scripts/scope_closure_edge_qualification.ts
         - .github/workflows/ci.yml
+        - .github/workflows/stack-qualification.yml
         - docs/agents/repo-validation.md
         - test.example.http
     repo-docs:
@@ -459,9 +462,9 @@ rules:
         kind: runtime-test
       - path: scripts/run-portal-upstash-live-fixture.cjs
         kind: live-proof-runner
-      - path: test/fixtures/supabase-cli-v2.116.0-functions-transport.json
+      - path: test/fixtures/supabase-cli-v2.121.0-functions-transport.json
         kind: source-contract-fixture
-      - path: test/fixtures/supabase-edge-runtime-v1.74.3-deno.json
+      - path: test/fixtures/supabase-edge-runtime-v1.77.4-deno.json
         kind: source-contract-fixture
     requiredDocs:
       - path: AGENTS.md
@@ -599,6 +602,8 @@ rules:
         kind: qualification-adapter
       - path: .github/workflows/ci.yml
         kind: automation
+      - path: .github/workflows/stack-qualification.yml
+        kind: automation
     requiredDocs:
       - path: .docpact/config.yaml
         mode: review_or_update
@@ -625,7 +630,7 @@ rules:
         kind: dependency-lock
       - path: pnpm-workspace.yaml
         kind: package-manager-config
-      - path: test/fixtures/supabase-edge-runtime-v1.74.3-deno.json
+      - path: test/fixtures/supabase-edge-runtime-v1.77.4-deno.json
         kind: source-contract-fixture
       - path: supabase/config.toml
         kind: deploy-config

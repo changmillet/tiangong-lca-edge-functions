@@ -1,4 +1,4 @@
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.112.4';
+import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 import { corsHeaders } from './cors.ts';
 import { isWorkerJobsCutoverEnabled } from './worker_jobs_cutover.ts';
 

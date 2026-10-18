@@ -23,9 +23,9 @@ checkPaths:
   - supabase/config.toml
   - supabase/.env.example
   - test.example.http
-lastReviewedAt: 2026-10-16
-lastReviewedCommit: e383a89bc7f0f957e55abd79033d4ce4cbb29b2e
-lastReviewedNote: 'Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs.'
+lastReviewedAt: 2026-10-19
+lastReviewedCommit: bc529ea3d64c761be6c3132e957829fc9bfab2f7
+lastReviewedNote: 'Edge #496: reviewed exact worker version getters separately from compiler/binary identity, concrete fixture readiness at unchanged bounds, bounded pre-cleanup evidence and source-supported normal shutdown/stop inventory. Security/body/JWT/cancellation assertions remain; actual new hosted qualification is pending.'
 ---
 
 # TianGong-LCA-Edge-Functions
@@ -69,7 +69,7 @@ These files are the low-token entry path for repo ownership, branch and deploy r
 - Deno 2.1.4; `deno --version` must report bundled TypeScript 5.6.2. `.tool-versions` is the shared local/CI version source.
 - Node.js 24.19.0 and pnpm 11.24.0 for auxiliary Supabase CLI, formatting, and validation wrappers
 - Docker Engine (required if you run local Supabase stack)
-- Supabase CLI 2.116.0, installed through this repository's `supabase` dev dependency; it embeds Edge Runtime 1.74.3, whose runtime reports Deno 2.1.4
+- Supabase CLI 2.121.0, installed through this repository's `supabase` dev dependency; it selects the default Edge Runtime image release 1.77.4, whose tagged source declares Deno 2.1.4. The binary reports its separate crate version 0.1.0; hosted qualification binds both identities to source and the actual image digest. Worker `Deno.version` is a separate diagnostic getter with the wrapped runtime/Deno label and literal TypeScript 5.1.6/V8 11.6.189.12; these labels do not change the standalone compiler requirement
 
 Initialize/refresh Node dependencies:
 
@@ -114,7 +114,7 @@ Credential contract:
 - Keep `REMOTE_SUPABASE_URL`, `REMOTE_SUPABASE_PUBLISHABLE_KEY`, and `REMOTE_SUPABASE_SECRET_KEY` from the same Supabase project. A mismatched or stale secret key causes local RPC calls to fail with `Invalid API key` after request authentication succeeds.
 - The Portal HMAC secret is independent of `REMOTE_SERVICE_API_KEY`, Supabase JWT secrets, and every Supabase client key. Keep dev/Preview and main/Production keyrings, Supabase projects, EdgeOne deployments, and `portal:<environment>:v1` namespaces distinct. The user-approved initial deployment shares one Upstash database/token across R0, Dev, and Production; this is a recorded residual risk and never a permission boundary. Only the verifier holds an optional previous HMAC key during rotation.
 - The R0 HMAC, publishable key, namespace, and Preview secret copies are one-time fixtures. Current and previous require different key IDs and constant-time-distinct secrets. Both empty optional previous values mean absent; one empty side fails closed. An empty optional Standard Redis password means absent. Under the approved shared-Upstash deployment, the endpoint/token source is retained and coordinated across environments: cleanup removes only its R0 secret copies and exact fixture keys together with `portal_r0_hmac_verify_v1`.
-- `PORTAL_SUPABASE_PUBLISHABLE_KEY` is matched in constant time against the inbound `apikey`, checked against the current project's `SUPABASE_PUBLISHABLE_KEYS` registry, paired only with platform-injected `SUPABASE_URL`, and reused unchanged for the downstream public RPC. Remote runtime requires HTTPS; the only non-loopback HTTP origin is exact pinned CLI `http://kong:8000`. `REMOTE_SUPABASE_URL`, generic keys, legacy anon keys, secret/service-role keys, and user credentials cannot replace the Portal key. CLI 2.116.0 maps the local key into `sb-api-key` and leaves Authorization absent. `SUPABASE_ANON_KEY` is consulted only for the narrow older-local-client Bearer compatibility path at that exact local origin; hosted Authorization is rejected.
+- `PORTAL_SUPABASE_PUBLISHABLE_KEY` is matched in constant time against the inbound `apikey`, checked against the current project's `SUPABASE_PUBLISHABLE_KEYS` registry, paired only with platform-injected `SUPABASE_URL`, and reused unchanged for the downstream public RPC. Remote runtime requires HTTPS; the only non-loopback HTTP origin is exact pinned CLI `http://kong:8000`. `REMOTE_SUPABASE_URL`, generic keys, legacy anon keys, secret/service-role keys, and user credentials cannot replace the Portal key. CLI 2.121.0 maps the local key into `sb-api-key` and leaves Authorization absent. `SUPABASE_ANON_KEY` is consulted only for the narrow older-local-client Bearer compatibility path at that exact local origin; hosted Authorization is rejected.
 - Portal Redis provider and credential variables are the only Edge Redis surface. Missing Portal-only values fail closed; provisioning Portal must not create a generic auth Redis fallback.
 - Portal Hybrid provider variables are likewise independent of generic OpenAI, SageMaker, and AWS values. Missing, partial, whitespace-bearing, malformed, or unsafe Portal provider configuration fails before Redis, model, AWS, or database calls; an exact-false/unset kill switch returns before that provider configuration is read.
 - `portal_data_product_results_v1` uses only the matching project publishable key for its downstream `api.portal_get_published_lcia_values_v1` call. It must never receive or construct a service-role/secret-key client.
@@ -325,7 +325,7 @@ The endpoint has no database, RPC, model, provider, repository, storage, cache, 
 
 `portal_data_product_results_v1` accepts the public `POST /functions/v1/portal_data_product_results_v1` path and the exact `/portal_data_product_results_v1` path produced after pinned Supabase CLI routing strips `/functions/v1`; no suffix or other function path is accepted. HMAC canonical bytes always contain the public path. The request requires the five `portal-hmac-v1` headers (`x-portal-key-id`, `x-portal-timestamp`, `x-portal-nonce`, `x-portal-body-sha256`, and `x-portal-signature`) plus the exact matching project `apikey`. `x-portal-correlation-id` accepts a canonical UUID; missing or invalid values are replaced, and every response returns the resolved `X-Portal-Correlation-Id`.
 
-The Portal BFF sends no `Authorization` or Cookie. The handler resolves only `PORTAL_SUPABASE_PUBLISHABLE_KEY`, proves it belongs to the current project through `SUPABASE_PUBLISHABLE_KEYS`, constant-time matches it to inbound `apikey`, and passes the same value downstream. Pinned CLI 2.116.0 maps that key into `sb-api-key` while leaving Authorization absent. At exact local `SUPABASE_URL=http://kong:8000`, the handler still tolerates the exact `Bearer <configured legacy anon JWT>` only for older local-client compatibility; hosted HTTPS rejects every Authorization. User, service-role, other Bearer, Cookie, `REMOTE_*` public keys, `SERVICE_API_KEY`, Supabase secret/service-role keys, user context, and storage locators remain forbidden after HMAC and before Redis.
+The Portal BFF sends no `Authorization` or Cookie. The handler resolves only `PORTAL_SUPABASE_PUBLISHABLE_KEY`, proves it belongs to the current project through `SUPABASE_PUBLISHABLE_KEYS`, constant-time matches it to inbound `apikey`, and passes the same value downstream. Pinned CLI 2.121.0 maps that key into `sb-api-key` while leaving Authorization absent. At exact local `SUPABASE_URL=http://kong:8000`, the handler still tolerates the exact `Bearer <configured legacy anon JWT>` only for older local-client compatibility; hosted HTTPS rejects every Authorization. User, service-role, other Bearer, Cookie, `REMOTE_*` public keys, `SERVICE_API_KEY`, Supabase secret/service-role keys, user context, and storage locators remain forbidden after HMAC and before Redis.
 
 The signed JSON body has one fixed shape:
 
@@ -466,7 +466,7 @@ Queued and running jobs return public progress. A completed job includes `data.r
 
 - No LangChain dependency in active path.
 - OpenAI SDK mapping is in `supabase/functions/deno.json`:
-  - `@openai/openai -> npm:openai@7.8.0`
+  - `@openai/openai -> npm:openai@7.38.0`
 - Shared wrappers:
   - `supabase/functions/_shared/openai_structured.ts`
   - `supabase/functions/_shared/openai_chat.ts`
@@ -487,7 +487,7 @@ Only `OPENAI_API_KEY` is used from the key file. The runner sends fixed syntheti
 
 Provision `HYBRID_OPENAI_CHAT_MODEL=gpt-6-luna` and `PORTAL_OPENAI_CHAT_MODEL=gpt-6-luna` explicitly in each qualified target. Preserve the generic translation model and isolated Portal credentials. Portal V1 cache identity retains the full signed request; V2 retains query/kind reuse. Both bind model/endpoint/embedding identity, reasoning, actual synonym rules and schema, plus the named task-template revision. Update that revision if the task or user prompt template changes. Changed identities miss; old V2 continuations restart before model/database work. No broad Redis deletion is part of migration.
 
-The reviewed Edge dependency baseline also pins AWS SDK 3.1121.0, Supabase JSR 2.112.4, Upstash Redis 1.38.3, Deno Redis 0.41.2, Zod 4.5.4, and Prettier 3.9.6. Redis dependencies remain only for isolated Portal runtimes. TIDAS package routes enqueue database `worker_jobs`; they do not import the JavaScript TIDAS SDK.
+The reviewed Edge #495 runtime dependency baseline pins AWS SDK 3.1152.0, OpenAI 7.38.0, Supabase JS/Functions JS 2.118.0 and Deno Redis 0.42.0, with the explicitly reviewed Zod 4.6.7 extension, on the unchanged Deno 2.1.4 stack. All direct Supabase consumers match that version and Functions JS declarations retain the mapped alias. Upstash Redis 1.38.3, Postgres HTTPS and TIDAS SDK 0.4.1 remain unchanged. The separately owned Edge #496 developer scope selects CLI 2.121.0 / default Edge Runtime 1.77.4 and Prettier 3.9.10; this candidate normally composes both scopes. Combined local gates and both latest inventories passed; the hosted baseline/candidate stack qualification remains pending. Zod also resolves beneath the unchanged TIDAS SDK 0.4.1 consumer; this is a validator dependency update, not adoption of SDK 0.6.0. Redis dependencies remain only for isolated Portal runtimes. TIDAS package routes enqueue database `worker_jobs`; they do not import the JavaScript TIDAS SDK.
 
 ## Required Development Workflow
 
@@ -507,7 +507,7 @@ Use `pnpm format` only when you intend to rewrite files with Prettier.
 pnpm check
 ```
 
-This canonical gate validates exact runtime versions, one bounded shared 157-root Deno graph, 73 Node contract tests, and 578 default Deno behavior tests; the one credentialed live Upstash test is ignored unless explicitly selected. It intentionally skips the currently disabled `antchain_*` functions. The retired generic non-FT embedding worker and LLM summary webhooks are no longer part of the source inventory; the deterministic `embedding_ft` family remains active.
+This canonical gate validates exact runtime versions, one bounded shared Deno graph, Node contract tests, and default Deno behavior tests, reporting their actual inventory and test counts; the one credentialed live Upstash test is ignored unless explicitly selected. It intentionally skips the currently disabled `antchain_*` functions. The retired generic non-FT embedding worker and LLM summary webhooks are no longer part of the source inventory; the deterministic `embedding_ft` family remains active.
 
 3. Run minimal checks for affected files when you need scoped verification during iteration:
 

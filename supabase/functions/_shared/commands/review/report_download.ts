@@ -1,4 +1,4 @@
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.112.4';
+import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 import { z } from 'zod';
 
 import type { ActorContext } from '../../command_runtime/actor_context.ts';
