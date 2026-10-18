@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-16
-lastReviewedCommit: fc82dfe3e4000ebc3df822830e1303ef03bff575
-lastReviewedNote: 'Reviewed for Edge #482: the existing secretless CI now covers dependency-input PRs, while discovery, source qualification and hosted deployment remain separate.'
+lastReviewedAt: 2026-10-18
+lastReviewedCommit: 523a279996ec9398b947da6cbcb1caa96491c6e1
+lastReviewedNote: 'Reviewed Edge #491 at 523a279: changing only the reviewed pnpm setup Action preserves source layout, runtime/provider boundaries, canonical validation and explicit deployment entrypoints.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
