@@ -40,8 +40,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: '84a0b8411c4b4aa9a8a8d682637966c5f86b2a0a'
-lastReviewedNote: 'Edge #492: reviewed opaque artifact identities and preserved integrity checks on the #491 pnpm setup baseline; runtime pins, auth and explicit deployment boundaries remain unchanged.'
+lastReviewedCommit: c9af72a9ec1fafa126147a2dafef5caa6db2c864
+lastReviewedNote: 'Edge #495: reviewed the selected five runtime targets and real-SDK wire/auth/Redis proof at c9af72a9. Exact stack, Action, reader and unrelated pins remain protected. Default AWS sys-permission baseline and global outdated-empty prerequisites remain explicit; no deployment or full acceptance claimed.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md

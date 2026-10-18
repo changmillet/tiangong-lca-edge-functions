@@ -23,9 +23,9 @@ checkPaths:
   - supabase/config.toml
   - supabase/.env.example
   - test.example.http
-lastReviewedAt: 2026-10-16
-lastReviewedCommit: e383a89bc7f0f957e55abd79033d4ce4cbb29b2e
-lastReviewedNote: 'Reviewed for Worker #320 phase one: independent immutable-bundle export jobs, default Parquet, bounded compressed CSV and terminal polling protection. Existing authorization, numerical, lease and production boundaries remain; validation results belong to the linked Issues and PRs.'
+lastReviewedAt: 2026-10-18
+lastReviewedCommit: c9af72a9ec1fafa126147a2dafef5caa6db2c864
+lastReviewedNote: 'Edge #495: reviewed the selected five runtime targets and real-SDK wire/auth/Redis proof at c9af72a9. Exact stack, Action, reader and unrelated pins remain protected. Default AWS sys-permission baseline and global outdated-empty prerequisites remain explicit; no deployment or full acceptance claimed.'
 ---
 
 # TianGong-LCA-Edge-Functions
