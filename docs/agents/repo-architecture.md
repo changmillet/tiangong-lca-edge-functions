@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-19
-lastReviewedCommit: 23555fd091355a312d2a3bed6cbaa8c20fe47506
-lastReviewedNote: 'Edge #496: reviewed dual Docker log streams, strict current signed-nonce cancellation events, sanitized request/read/abort receipts and negative controls. One request and the existing poll bounds, runtime behavior and independent cleanup remain unchanged; fresh hosted qualification is still required.'
+lastReviewedCommit: 0a242b956e9fd6eaa24cf5217578560c840bf1b6
+lastReviewedNote: 'Edge #498: reviewed exact current-serve Kong generation proof and narrow automatic canonical CI coverage for the actual synthetic-stack inputs, with independent positive/removal/negative controls. Jobs, events, privileges, credentials, refs, product/dependency pins and functional assertions remain unchanged; new hosted qualification is required.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -83,7 +83,7 @@ Data Product closure intent admits allocation v3, v4 and v5 and forwards an expl
 | `supabase/functions/deno.json` | stable | Deno config and import map used by local checks and scripted remote deploy bundling |
 | `test.example.http` | stable | checked-in smoke request collection for local and remote routes |
 | `.github/PULL_REQUEST_TEMPLATE/*.md` | stable | M2 branch-specific PR note shape for feature and promote flows |
-| `.github/dependabot.yml` and `.github/workflows/ci.yml` | stable | bounded dependency discovery and the existing secretless canonical gate for dependency-input PRs; detailed scope and coverage limits live in the validation guide |
+| `.github/dependabot.yml` and `.github/workflows/ci.yml` | stable | bounded dependency discovery and the existing secretless canonical gate for dependency/selected stack qualification input PRs; detailed scope and coverage limits live in the validation guide |
 
 ## Shared browser preflight policy
 

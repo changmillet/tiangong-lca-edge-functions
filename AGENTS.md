@@ -40,8 +40,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-19
-lastReviewedCommit: 23555fd091355a312d2a3bed6cbaa8c20fe47506
-lastReviewedNote: 'Edge #496: reviewed dual Docker log streams, strict current signed-nonce cancellation events, sanitized request/read/abort receipts and negative controls. One request and the existing poll bounds, runtime behavior and independent cleanup remain unchanged; fresh hosted qualification is still required.'
+lastReviewedCommit: 0a242b956e9fd6eaa24cf5217578560c840bf1b6
+lastReviewedNote: 'Edge #498: reviewed exact current-serve Kong generation proof and narrow automatic canonical CI coverage for the actual synthetic-stack inputs, with independent positive/removal/negative controls. Jobs, events, privileges, credentials, refs, product/dependency pins and functional assertions remain unchanged; new hosted qualification is required.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
@@ -98,7 +98,7 @@ Keep these entry-level facts in `AGENTS.md`. Use `README.md` and `docs/agents/re
 - local serve command: `pnpm start`
 - required stack qualification: `pnpm qualify:stack` runs only on an owned Docker-enabled hosted Linux runner; source fixtures and local checks do not establish a hosted stack pass; every fixture network stays internal, and exact owned endpoint relays provide loopback-only host access with verified listener/resource cleanup
 - baseline local validation: non-mutating `pnpm lint` and canonical `pnpm check`
-- dependency-input PRs to `dev` and `main` reuse the secretless `CI` workflow; monitoring scope, security routing and remaining URL/toolchain pins are recorded in `docs/agents/repo-validation.md`
+- dependency-input and selected synthetic stack qualification PRs to `dev` and `main` reuse the secretless `CI` workflow; monitoring scope, security routing and remaining URL/toolchain pins are recorded in `docs/agents/repo-validation.md`
 - `pnpm check` validates exact runtime versions, checks all enabled function/test roots through one bounded shared Deno graph, runs the Node contract tests, and executes the default Deno behavior tests plus one opt-in live Upstash test that remains ignored without explicit credentials
 - schema-boundary regression: `test/schema_boundary_contract_test.ts`
 - formatting fix command: `pnpm format`
@@ -213,4 +213,4 @@ Install the versioned local hook once per checkout:
 ./scripts/install-git-hooks.sh
 ```
 
-The `pre-push` hook runs `scripts/docpact-gate.sh`, which delegates CLI lookup to `scripts/docpact` and performs strict config validation plus enforced lint before the push leaves the machine. It then runs non-mutating `pnpm lint` and canonical `pnpm check` as the local test gate, and aborts if the lint step changes the working tree. The wrapper checks `DOCPACT_BIN`, Cargo install locations, Homebrew install locations, and then `PATH`, so local agent shells should not fail only because bare `docpact` is unavailable. The default comparison base is `origin/dev` for routine branches and `origin/main` for promote or hotfix branches. Override it for unusual stacks with `DOCPACT_BASE_REF=<ref>` or `scripts/docpact-gate.sh --base <ref>`. The gate writes its detailed report to a temporary file so normal pushes do not create `.docpact/runs/` artifacts. The GitHub `CI` workflow supports manual dispatch and narrowly scoped dependency-input PRs.
+The `pre-push` hook runs `scripts/docpact-gate.sh`, which delegates CLI lookup to `scripts/docpact` and performs strict config validation plus enforced lint before the push leaves the machine. It then runs non-mutating `pnpm lint` and canonical `pnpm check` as the local test gate, and aborts if the lint step changes the working tree. The wrapper checks `DOCPACT_BIN`, Cargo install locations, Homebrew install locations, and then `PATH`, so local agent shells should not fail only because bare `docpact` is unavailable. The default comparison base is `origin/dev` for routine branches and `origin/main` for promote or hotfix branches. Override it for unusual stacks with `DOCPACT_BASE_REF=<ref>` or `scripts/docpact-gate.sh --base <ref>`. The gate writes its detailed report to a temporary file so normal pushes do not create `.docpact/runs/` artifacts. The GitHub `CI` workflow supports manual dispatch and narrowly scoped dependency/stack qualification input PRs.

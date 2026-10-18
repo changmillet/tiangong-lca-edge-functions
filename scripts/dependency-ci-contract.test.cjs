@@ -46,7 +46,20 @@ function matchesPr(source, branch, paths) {
   const patterns = listBelow(source, 'paths', 4);
   return paths.some((changed) =>
     patterns.some((pattern) =>
-      pattern.endsWith('/**') ? changed.startsWith(pattern.slice(0, -2)) : changed === pattern,
+      new RegExp(
+        '^' +
+          pattern
+            .split('**')
+            .map((part) =>
+              part
+                .split('*')
+                .map((literal) => literal.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'))
+                .join('[^/]*'),
+            )
+            .join('.*') +
+          '$',
+        'u',
+      ).test(changed),
     ),
   );
 }
@@ -55,6 +68,63 @@ test('dependency PRs use the canonical secretless exact-head gate', () => {
   assertReadOnlyCandidate(workflow);
   assert.match(workflow, /^  workflow_dispatch:$/mu);
   assert.doesNotMatch(workflow, /^  push:$/mu);
+  assert.deepEqual(
+    [...workflow.split(/^jobs:\n/mu)[1].matchAll(/^  ([\w-]+):$/gmu)].map((match) => match[1]),
+    ['validate'],
+  );
+});
+
+test('every selected stack input triggers the same canonical job and removal loses that coverage', () => {
+  const selected = [
+    ['scripts/qualify-local-stack.cjs', 'scripts/qualify-local-stack.cjs'],
+    ['scripts/stack-qualification/**', 'scripts/stack-qualification/startup.cjs'],
+    ['scripts/stack-*.test.cjs', 'scripts/stack-startup.test.cjs'],
+    ['test/fixtures/stack-qualification/**', 'test/fixtures/stack-qualification/portal.ts'],
+    [
+      'test/fixtures/supabase-cli-*-functions-transport.json',
+      'test/fixtures/supabase-cli-v2.121.0-functions-transport.json',
+    ],
+    [
+      'test/fixtures/supabase-edge-runtime-*-deno.json',
+      'test/fixtures/supabase-edge-runtime-v1.77.4-deno.json',
+    ],
+    ['supabase/functions/_shared/portal_hmac.ts', 'supabase/functions/_shared/portal_hmac.ts'],
+    [
+      'supabase/functions/_shared/portal_public_transport.ts',
+      'supabase/functions/_shared/portal_public_transport.ts',
+    ],
+  ];
+  for (const branch of ['dev', 'main'])
+    for (const [pattern, input] of selected) {
+      assert.ok(workflow.includes(`      - ${pattern}\n`));
+      assert.equal(matchesPr(workflow, branch, [input]), true, input);
+      assert.equal(
+        matchesPr(workflow.replace(`      - ${pattern}\n`, ''), branch, [input]),
+        false,
+        `missing ${pattern}`,
+      );
+    }
+  const inputs = [
+    ...fs
+      .readdirSync(path.join(root, 'scripts'))
+      .filter((name) => /^stack-.*\.test\.cjs$/u.test(name))
+      .map((name) => 'scripts/' + name),
+    ...fs
+      .readdirSync(path.join(root, 'scripts/stack-qualification'))
+      .map((name) => 'scripts/stack-qualification/' + name),
+    ...fs
+      .readdirSync(path.join(root, 'test/fixtures/stack-qualification'))
+      .map((name) => 'test/fixtures/stack-qualification/' + name),
+    ...fs
+      .readdirSync(path.join(root, 'test/fixtures'))
+      .filter((name) =>
+        /^supabase-(?:cli-.*-functions-transport|edge-runtime-.*-deno)\.json$/u.test(name),
+      )
+      .map((name) => 'test/fixtures/' + name),
+  ];
+  for (const input of inputs)
+    for (const branch of ['dev', 'main'])
+      assert.equal(matchesPr(workflow, branch, [input]), true, input);
 });
 
 test('privilege, credential and candidate substitutions are rejected', () => {
@@ -102,6 +172,12 @@ test('unrelated runtime, test and documentation changes add no automatic gate', 
     'test/auth_test.ts',
     'README.md',
     'docs/agents/repo-validation.md',
+    'scripts/deeper/stack-startup.test.cjs',
+    'scripts/stack-startup.test.cjs.bak',
+    'scripts/stack-qualification-other/startup.cjs',
+    'test/fixtures/other.json',
+    'test/fixtures/supabase-cli-v2.121.0-functions-transport.json.bak',
+    'supabase/functions/_shared/portal_other.ts',
   ]) {
     assert.equal(matchesPr(workflow, 'dev', [changed]), false, changed);
   }
