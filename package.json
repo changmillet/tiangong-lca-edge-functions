@@ -2,8 +2,8 @@
   "config": {
     "denoVersion": "2.1.4",
     "denoTypeScriptVersion": "5.6.2",
-    "supabaseCliVersion": "2.116.0",
-    "supabaseEdgeRuntimeVersion": "1.74.3",
+    "supabaseCliVersion": "2.121.0",
+    "supabaseEdgeRuntimeVersion": "1.77.4",
     "supabaseProjectRefDev": "submidrhbtknjxfympna",
     "supabaseProjectRefMain": "qgzvkongdjqiiamzbbts"
   },
@@ -27,10 +27,11 @@
     "cleanup:portal-r0": "node ./scripts/cleanup-portal-r0-fixture.cjs",
     "probe:auth": "node ./scripts/probe-functions-auth.cjs",
     "format": "pnpm exec prettier --write \"**/*.{cjs,js,jsx,tsx,ts,less,md,json,yml,yaml}\"",
-    "lint": "pnpm exec prettier --check \"**/*.{cjs,js,jsx,tsx,ts,less,md,json,yml,yaml}\""
+    "lint": "pnpm exec prettier --check \"**/*.{cjs,js,jsx,tsx,ts,less,md,json,yml,yaml}\"",
+    "qualify:stack": "node scripts/qualify-local-stack.cjs"
   },
   "devDependencies": {
-    "prettier": "3.9.6",
-    "supabase": "2.116.0"
+    "prettier": "3.9.10",
+    "supabase": "2.121.0"
   }
 }

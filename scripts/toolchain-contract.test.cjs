@@ -33,6 +33,7 @@ const workflowSources = fs
   .map((fileName) => ({ fileName, source: read(`.github/workflows/${fileName}`) }));
 
 const expectedActions = new Map([
+  ['actions/upload-artifact', 'cf430e030ddbb5b0abf93d22962f4752f3646cd9'],
   ['actions/checkout', '3d3c42e5aac5ba805825da76410c181273ba90b1'],
   ['denoland/setup-deno', '22d081ff2d3a40755e97629de92e3bcbfa7cf2ed'],
   ['dtolnay/rust-toolchain', '4360b52568e2003a75bf9bc1d59f33a8e3fc893c'],
@@ -46,10 +47,10 @@ test('keeps Supabase Edge Runtime-compatible Deno authoritative and auxiliary to
   assert.deepEqual(packageJson.engines, { node: '24.19.0', pnpm: '11.24.0' });
   assert.equal(packageJson.config.denoVersion, '2.1.4');
   assert.equal(packageJson.config.denoTypeScriptVersion, '5.6.2');
-  assert.equal(packageJson.config.supabaseCliVersion, '2.116.0');
-  assert.equal(packageJson.config.supabaseEdgeRuntimeVersion, '1.74.3');
-  assert.equal(packageJson.devDependencies.prettier, '3.9.6');
-  assert.equal(packageJson.devDependencies.supabase, '2.116.0');
+  assert.equal(packageJson.config.supabaseCliVersion, '2.121.0');
+  assert.equal(packageJson.config.supabaseEdgeRuntimeVersion, '1.77.4');
+  assert.equal(packageJson.devDependencies.prettier, '3.9.10');
+  assert.equal(packageJson.devDependencies.supabase, '2.121.0');
   assert.equal(packageJson.devDependencies.typescript, undefined);
   assert.equal(packageJson.devDependencies['prettier-plugin-organize-imports'], undefined);
   assert.equal(read('.nvmrc').trim(), '24.19.0');
@@ -107,7 +108,7 @@ test('pins the latest reviewed Edge-compatible runtime dependency graph', () => 
 
 test('binds the Supabase CLI image to reviewed Edge Runtime and Deno source evidence', () => {
   const packageJson = readJson('package.json');
-  const fixture = readJson('test/fixtures/supabase-edge-runtime-v1.74.3-deno.json');
+  const fixture = readJson('test/fixtures/supabase-edge-runtime-v1.77.4-deno.json');
 
   assert.equal(fixture.schemaVersion, 'supabase.edge-runtime-deno-source.v1');
   assert.equal(fixture.cli.version, packageJson.config.supabaseCliVersion);
@@ -128,15 +129,15 @@ test('binds the Supabase CLI image to reviewed Edge Runtime and Deno source evid
     [
       {
         repository: 'supabase/cli',
-        ref: 'v2.116.0',
+        ref: 'v2.121.0',
         path: 'apps/cli-go/pkg/config/templates/Dockerfile',
-        gitBlobSha: 'f24a2d104363a974b44c0c6b711e12bd19b62376',
+        gitBlobSha: '563c96ccd7ce0a7d1f4052750b391a1a46ca3836',
       },
       {
         repository: 'supabase/edge-runtime',
-        ref: 'v1.74.3',
+        ref: 'v1.77.4',
         path: 'deno/Cargo.toml',
-        gitBlobSha: 'a71e701672fc20c82d9d08f71f8bf157a9dbdd3b',
+        gitBlobSha: '7d9ff170f4a4ce3d82096705f9a97ee86984fb6b',
       },
       {
         repository: 'denoland/deno',
@@ -152,8 +153,8 @@ test('uses one frozen pnpm graph without npm-owned compiler tooling', () => {
   const lockfile = read('pnpm-lock.yaml');
   const workspace = read('pnpm-workspace.yaml');
 
-  assert.match(lockfile, /^\s{2}prettier@3\.9\.6:/mu);
-  assert.match(lockfile, /^\s{2}supabase@2\.116\.0:/mu);
+  assert.match(lockfile, /^\s{2}prettier@3\.9\.10:/mu);
+  assert.match(lockfile, /^\s{2}supabase@2\.121\.0:/mu);
   assert.doesNotMatch(lockfile, /^\s{2}typescript@/mu);
   assert.doesNotMatch(lockfile, /prettier-plugin-organize-imports/u);
   assert.match(workspace, /supabase:\s*true/u);

@@ -16,14 +16,14 @@ test('checks the exact inventory through one bounded shared graph', () => {
   );
   const targets = discoverTargets();
 
-  assert.equal(targets.length, 162);
+  assert.equal(targets.length, 163);
   assert.deepEqual(targets, [...new Set(targets)].sort());
   assert.equal(
     targets.some((target) => target.includes('/antchain_')),
     false,
   );
   // Includes the scoped Portal request proof added by Edge #473.
-  assert.equal(targets.filter((target) => target.startsWith('test/')).length, 85);
+  assert.equal(targets.filter((target) => target.startsWith('test/')).length, 86);
 
   const batches = buildCheckBatches(targets);
   assert.equal(MAX_ROOTS_PER_BATCH, 200);

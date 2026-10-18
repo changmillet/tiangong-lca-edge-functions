@@ -281,7 +281,7 @@ Deno.test('Portal transport is pinned to reviewed Supabase CLI source evidence',
     devDependencies: { supabase: string };
   };
   const fixture = JSON.parse(
-    await Deno.readTextFile('./test/fixtures/supabase-cli-v2.116.0-functions-transport.json'),
+    await Deno.readTextFile('./test/fixtures/supabase-cli-v2.121.0-functions-transport.json'),
   ) as {
     schemaVersion: string;
     cliVersion: string;
@@ -310,25 +310,25 @@ Deno.test('Portal transport is pinned to reviewed Supabase CLI source evidence',
     fixture.sources.map(({ path, gitBlobSha }) => ({ path, gitBlobSha })),
     [
       {
-        path: 'apps/cli/src/legacy/commands/start/templates/kong.yml.ts',
-        gitBlobSha: '60912939332c117c41ecf9ebdf67d1e7fb2707db',
+        path: 'apps/cli/src/commands/start/templates/kong.yml.ts',
+        gitBlobSha: '55c7a3957a95e30e89b24b860019d850af0776b4',
       },
       {
-        path: 'apps/cli/src/legacy/commands/start/services/kong.service.ts',
-        gitBlobSha: 'd0e38c603814ec3c4cd5c0914ed5c95a187e5e2f',
+        path: 'apps/cli/src/commands/start/services/kong.service.ts',
+        gitBlobSha: '199f36ca754ac264ec0bd7e99541f3e1ec5a22bf',
       },
       {
         path: 'apps/cli/src/shared/functions/serve.ts',
-        gitBlobSha: 'a763e2ae78828f8803825dcc2d4dcb9ea5d86671',
+        gitBlobSha: '9d581fa23e3bf3cb17bb118860550cc20c824a4d',
       },
       {
         path: 'apps/cli/src/shared/functions/serve.main.ts',
-        gitBlobSha: '2cf89e2e719feaeaf0a8f93f77fb10619c94f59e',
+        gitBlobSha: 'b562e0ebf74b0dae61ad841e6ecd20ea35745543',
       },
     ],
   );
   for (const source of fixture.sources) {
-    assertEquals(source.url, `https://github.com/supabase/cli/blob/v2.116.0/${source.path}`);
+    assertEquals(source.url, `https://github.com/supabase/cli/blob/v2.121.0/${source.path}`);
   }
 
   const runtime = await Deno.readTextFile(

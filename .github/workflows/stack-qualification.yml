@@ -1,0 +1,59 @@
+name: Local stack qualification
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - package.json
+      - pnpm-lock.yaml
+      - scripts/qualify-local-stack.cjs
+      - scripts/stack-qualification/**
+      - test/fixtures/stack-qualification/**
+      - test/fixtures/supabase-cli-*-functions-transport.json
+      - test/fixtures/supabase-edge-runtime-*-deno.json
+      - supabase/functions/_shared/portal_hmac.ts
+      - supabase/functions/_shared/portal_public_transport.ts
+      - .github/workflows/stack-qualification.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edge-stack-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, candidate]
+    env:
+      EDGE_STACK_QUALIFICATION_ROOT: ${{ runner.temp }}/edge496-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+        with:
+          version: 11.24.0
+          runtime: node@24.19.0
+          cache: false
+          install: false
+      - name: Actual CLI lifecycle and offline gateway/runtime matrix
+        run: node scripts/qualify-local-stack.cjs "${{ matrix.variant }}"
+      - name: Recover and verify exact owned resources
+        if: always()
+        run: node scripts/stack-qualification/cleanup.cjs
+      - name: Preserve complete sanitized qualification receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stack-${{ matrix.variant }}-${{ github.sha }}
+          path: ${{ env.EDGE_STACK_QUALIFICATION_ROOT }}/**/evidence/**
+          if-no-files-found: error
+          retention-days: 14
