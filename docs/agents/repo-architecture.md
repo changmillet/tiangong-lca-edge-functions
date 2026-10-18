@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-19
-lastReviewedCommit: bc529ea3d64c761be6c3132e957829fc9bfab2f7
-lastReviewedNote: 'Edge #496: reviewed exact worker version getters separately from compiler/binary identity, concrete fixture readiness at unchanged bounds, bounded pre-cleanup evidence and source-supported normal shutdown/stop inventory. Security/body/JWT/cancellation assertions remain; actual new hosted qualification is pending.'
+lastReviewedCommit: bc7cc43ec14a7744e47f7c11d600d63835110b28
+lastReviewedNote: 'Edge #496: reviewed failed/timeout diagnostic inspection as unknown rather than absence, identity-bound successful presence and negative controls. Primary failures, functional assertions and independent cleanup remain unchanged; actual hosted qualification is still pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml

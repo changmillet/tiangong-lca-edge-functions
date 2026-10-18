@@ -45,7 +45,7 @@ test('failure diagnostics bind full owned IDs, retain crashed state, sanitize an
         : { status: 0, stdout: 'synthetic-secret'.repeat(10000), stderr: 'synthetic-secret' };
     },
   });
-  assert.ok(result.every((x) => x.present));
+  assert.ok(result.every((x) => x.inspectionSucceeded === true && x.present === true));
   assert.deepEqual(
     calls.filter((x) => x[0] === 'logs'),
     Array(4).fill(['logs', '--tail', '100', 'b'.repeat(64)]),
@@ -92,21 +92,47 @@ test('foreign labels, mismatched names and malformed IDs never permit reading co
     assert.ok(result.every((x) => x.error));
   }
 });
-test('diagnostic absence and collection errors remain evidence rather than hiding primary cleanup', () => {
-  const writes = {};
+test('timeouts and nonzero inspection exits prove neither presence nor absence', () => {
+  for (const failure of [
+    { status: null, error: { code: 'ETIMEDOUT' }, stderr: '' },
+    { status: 1, stderr: 'daemon unavailable' },
+    { status: 1, stderr: 'No such container' },
+  ]) {
+    const writes = {};
+    const result = collectFailureDiagnostics({
+      owner,
+      project,
+      sanitize: (x) => x,
+      write: (name, value) => {
+        writes[name] = value;
+      },
+      execute: () => failure,
+    });
+    assert.ok(result.every((x) => x.inspectionSucceeded === false && x.present === null));
+    assert.ok(result.every((x) => x.errorCode === failure.error?.code));
+    assert.deepEqual(writes['failure-diagnostics.json'], result);
+  }
   const result = collectFailureDiagnostics({
     owner,
     project,
     sanitize: (x) => x,
-    write: (n, v) => {
-      writes[n] = v;
-    },
-    execute: (args) => {
-      if (args[2].includes('edge_runtime')) return { status: 1, stderr: 'not present' };
+    write: () => {},
+    execute: () => {
       throw new Error('bounded inspection failed');
     },
   });
-  assert.equal(result[0].present, false);
-  assert.match(result[1].error, /bounded inspection failed/u);
-  assert.deepEqual(writes['failure-diagnostics.json'], result);
+  assert.ok(result.every((x) => x.inspectionSucceeded === false && x.present === null));
+  assert.ok(result.every((x) => /bounded inspection failed/u.test(x.error)));
+  const logFailure = collectFailureDiagnostics({
+    owner,
+    project,
+    sanitize: (x) => x,
+    write: () => {},
+    execute: (args) => {
+      if (args[0] === 'container') return { status: 0, stdout: JSON.stringify([info(args[2])]) };
+      throw new Error('log transport failed after known presence');
+    },
+  });
+  assert.ok(logFailure.every((x) => x.inspectionSucceeded === true && x.present === true));
+  assert.ok(logFailure.every((x) => /log transport failed/u.test(x.error)));
 });

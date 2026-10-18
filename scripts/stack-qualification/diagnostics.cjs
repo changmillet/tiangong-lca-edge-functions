@@ -12,12 +12,14 @@ function collectFailureDiagnostics({ owner, project, execute, sanitize, write })
     ['pair-runtime', `${owner}-runtime`, 'edge496.owner', owner],
     ['pair-kong', `${owner}-kong`, 'edge496.owner', owner],
   ]) {
+    let inspectedId;
     try {
       const result = execute(['container', 'inspect', name]);
       if (result.status !== 0) {
         summary.push({
           role,
-          present: false,
+          inspectionSucceeded: false,
+          present: null,
           exit: result.status,
           errorCode: result.error?.code,
           error: bounded(result.stderr),
@@ -28,6 +30,7 @@ function collectFailureDiagnostics({ owner, project, execute, sanitize, write })
       assert.equal(info.Name, '/' + name);
       assert.match(info.Id, /^[a-f0-9]{64}$/u);
       assert.equal(info.Config.Labels[label], value);
+      inspectedId = info.Id;
       write(`failure-${role}-state.json`, {
         id: info.Id,
         name: info.Name,
@@ -65,9 +68,21 @@ function collectFailureDiagnostics({ owner, project, execute, sanitize, write })
         stdout: bounded(logs.stdout),
         stderr: bounded(logs.stderr),
       });
-      summary.push({ role, present: true, id: info.Id, logsExit: logs.status });
+      summary.push({
+        role,
+        inspectionSucceeded: true,
+        present: true,
+        id: info.Id,
+        logsExit: logs.status,
+      });
     } catch (error) {
-      summary.push({ role, error: bounded(error.message) });
+      summary.push({
+        role,
+        inspectionSucceeded: inspectedId !== undefined,
+        present: inspectedId === undefined ? null : true,
+        id: inspectedId,
+        error: bounded(error.message),
+      });
     }
   }
   write('failure-diagnostics.json', summary);
