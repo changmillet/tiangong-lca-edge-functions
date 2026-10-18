@@ -40,8 +40,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 8bbe26dbd1a15030c7ec0b60c570f2f62ffb365d
-lastReviewedNote: 'Edges #495/#496: read the complete six-document review-plan set against combined 8bbe26d, corrected composition and observed local-proof descriptions, and bound the hosted workflow to existing governance; hosted gateway/lifecycle execution and independent final review remain pending.'
+lastReviewedCommit: 59489b57c9857f8390fdba2860e020cdd468ba6e
+lastReviewedNote: 'Edge #496: rechecked the runner-step root initialization against the previously fully read combined contract; exact toolchain, auth/deploy boundaries, mandatory hosted matrix and owned cleanup are unchanged. Hosted runtime qualification remains pending.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
