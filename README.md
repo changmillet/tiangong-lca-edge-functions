@@ -24,8 +24,8 @@ checkPaths:
   - supabase/.env.example
   - test.example.http
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: c9af72a9ec1fafa126147a2dafef5caa6db2c864
-lastReviewedNote: 'Edge #495: reviewed the selected five runtime targets and real-SDK wire/auth/Redis proof at c9af72a9. Exact stack, Action, reader and unrelated pins remain protected. Default AWS sys-permission baseline and global outdated-empty prerequisites remain explicit; no deployment or full acceptance claimed.'
+lastReviewedCommit: 5c9bf5e0878bf38de11aebcffc646afaf9e69cb4
+lastReviewedNote: 'Edge #495: reviewed the five runtime targets plus authorized Zod 4.6.7 extension at 5c9bf5e0, actual schema/parser diagnostics and SDK 0.4.1 Contact RPC gating. Exact runtime stack, Actions and reader fix remain protected. CLI/Prettier #496 and unchanged AWS default-permission limitation remain explicit; no deployment or global acceptance claimed.'
 ---
 
 # TianGong-LCA-Edge-Functions
