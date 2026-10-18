@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from 'jsr:@std/assert';
+import { assertEquals, assertRejects, assertStringIncludes } from 'jsr:@std/assert';
 
 import {
   admitPortalR0Request,
@@ -7,6 +7,11 @@ import {
   registerPortalR0Nonce,
   releasePortalR0Lease,
 } from '../supabase/functions/_shared/portal_r0_redis.ts';
+
+import {
+  createPortalRedisAdapter,
+  PortalRedisError,
+} from '../supabase/functions/_shared/redis_client.ts';
 
 function environment(values: Record<string, string | undefined>) {
   return { get: (name: string) => values[name] };
@@ -55,58 +60,93 @@ function integerArrayResponse(values: number[]): string {
   return `*${values.length}\r\n${values.map((value) => `:${value}\r\n`).join('')}`;
 }
 
-async function startStandardRedisFixture() {
+async function startStandardRedisFixture(options: { password?: string; holdKey?: string } = {}) {
   const listener = Deno.listen({ hostname: '127.0.0.1', port: 0 });
   const commands: RespCommand[] = [];
+  const connections = new Set<Deno.TcpConn>();
+  const handlers: Promise<void>[] = [];
   let replayRegistered = false;
+  function closeConnection(connection: Deno.TcpConn) {
+    try {
+      connection.close();
+    } catch (error) {
+      if (!(error instanceof Deno.errors.BadResource)) throw error;
+    }
+  }
   const task = (async () => {
     try {
       for await (const connection of listener) {
-        void (async () => {
-          let buffer = '';
-          const decoder = new TextDecoder();
-          const encoder = new TextEncoder();
-          const bytes = new Uint8Array(32 * 1024);
-          try {
-            while (true) {
-              const count = await connection.read(bytes);
-              if (count === null) break;
-              buffer += decoder.decode(bytes.subarray(0, count), { stream: true });
+        connections.add(connection);
+        handlers.push(
+          (async () => {
+            let buffer = '';
+            const decoder = new TextDecoder();
+            const encoder = new TextEncoder();
+            const bytes = new Uint8Array(32 * 1024);
+            try {
               while (true) {
-                const parsed = parseRespCommand(buffer);
-                if (!parsed) break;
-                buffer = buffer.slice(parsed.consumed);
-                commands.push(parsed.command);
-                const operation = parsed.command[0]?.toUpperCase();
-                let response: string;
-                if (operation === 'SET') {
-                  response = replayRegistered ? '$-1\r\n' : '+OK\r\n';
-                  replayRegistered = true;
-                } else if (operation === 'EVAL' && parsed.command[1]?.includes("'ZREM'")) {
-                  response = ':1\r\n';
-                } else if (operation === 'EVAL') {
-                  response = integerArrayResponse([0, 3, 19, 1, 0]);
-                } else {
-                  response = '-ERR unsupported fixture command\r\n';
+                const count = await connection.read(bytes);
+                if (count === null) break;
+                buffer += decoder.decode(bytes.subarray(0, count), { stream: true });
+                while (true) {
+                  const parsed = parseRespCommand(buffer);
+                  if (!parsed) break;
+                  buffer = buffer.slice(parsed.consumed);
+                  commands.push(parsed.command);
+                  const operation = parsed.command[0]?.toUpperCase();
+                  let response: string;
+                  if (operation === 'AUTH') {
+                    assertEquals(parsed.command, ['AUTH', options.password]);
+                    response = '+OK\r\n';
+                  } else if (operation === 'GET') {
+                    if (parsed.command[1] === options.holdKey) continue;
+                    const value = '{"value":0}';
+                    response =
+                      parsed.command[1] === 'fixture:missing'
+                        ? '$-1\r\n'
+                        : `$${value.length}\r\n${value}\r\n`;
+                  } else if (operation === 'SET') {
+                    response =
+                      parsed.command.includes('NX') && replayRegistered ? '$-1\r\n' : '+OK\r\n';
+                    if (parsed.command.includes('NX')) replayRegistered = true;
+                  } else if (operation === 'EVAL' && parsed.command[1] === 'fixture-error') {
+                    response = '-ERR synthetic fixture failure\r\n';
+                  } else if (operation === 'EVAL' && parsed.command[1]?.includes("'ZREM'")) {
+                    response = ':1\r\n';
+                  } else if (operation === 'EVAL') {
+                    response = integerArrayResponse([0, 3, 19, 1, 0]);
+                  } else {
+                    response = '-ERR unsupported fixture command\r\n';
+                  }
+                  await connection.write(encoder.encode(response));
                 }
-                await connection.write(encoder.encode(response));
               }
+            } catch (error) {
+              if (
+                !(error instanceof Deno.errors.BadResource) &&
+                !(error instanceof Deno.errors.Interrupted)
+              )
+                throw error;
+            } finally {
+              connections.delete(connection);
+              closeConnection(connection);
             }
-          } finally {
-            connection.close();
-          }
-        })();
+          })(),
+        );
       }
     } catch (error) {
       if (!(error instanceof Deno.errors.BadResource)) throw error;
     }
   })();
+  if (listener.addr.transport !== 'tcp') throw new Error('fixture requires TCP');
   return {
-    port: (listener.addr as Deno.NetAddr).port,
+    port: listener.addr.port,
     commands,
     async close() {
       listener.close();
+      for (const connection of connections) closeConnection(connection);
       await task;
+      await Promise.all(handlers);
     },
   };
 }
@@ -213,6 +253,61 @@ Deno.test(
       assertStringIncludes(fixture.commands[2][1], "redis.call('INCRBY'");
       assertStringIncludes(fixture.commands[3][1], "redis.call('ZREM'");
     } finally {
+      await fixture.close();
+    }
+  },
+);
+
+Deno.test(
+  'Standard Redis installed client authenticates and preserves bulk cache values and EX',
+  async () => {
+    const password = 'synthetic-redis-password';
+    const fixture = await startStandardRedisFixture({ password });
+    const adapter = await createPortalRedisAdapter({
+      provider: 'standard',
+      namespace: 'portal:wire-cache:v1',
+      timeoutMs: 500,
+      redisUrl: `redis://127.0.0.1:${fixture.port}`,
+      redisPassword: password,
+    });
+    try {
+      assertEquals(await adapter.get('fixture:cache'), '{"value":0}');
+      assertEquals(await adapter.get('fixture:missing'), null);
+      await adapter.setEx('fixture:cache', '{"value":0}', 30);
+      assertEquals(fixture.commands, [
+        ['AUTH', password],
+        ['GET', 'fixture:cache'],
+        ['GET', 'fixture:missing'],
+        ['SET', 'fixture:cache', '{"value":0}', 'EX', '30'],
+      ]);
+      const error = await assertRejects(
+        () => adapter.eval('fixture-error', [], []),
+        PortalRedisError,
+      );
+      assertEquals(error.message, 'guard_unavailable');
+      assertEquals(error.code, 'guard_unavailable');
+    } finally {
+      await adapter.close();
+      await fixture.close();
+    }
+  },
+);
+
+Deno.test(
+  'Standard Redis installed client timeout rejects a held reply and closes cleanly',
+  async () => {
+    const fixture = await startStandardRedisFixture({ holdKey: 'fixture:held' });
+    const adapter = await createPortalRedisAdapter({
+      provider: 'standard',
+      namespace: 'portal:wire-timeout:v1',
+      timeoutMs: 50,
+      redisUrl: `redis://127.0.0.1:${fixture.port}`,
+    });
+    try {
+      await assertRejects(() => adapter.get('fixture:held'), PortalRedisError, 'guard_unavailable');
+      assertEquals(fixture.commands, [['GET', 'fixture:held']]);
+    } finally {
+      await adapter.close();
       await fixture.close();
     }
   },

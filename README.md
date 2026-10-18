@@ -466,7 +466,7 @@ Queued and running jobs return public progress. A completed job includes `data.r
 
 - No LangChain dependency in active path.
 - OpenAI SDK mapping is in `supabase/functions/deno.json`:
-  - `@openai/openai -> npm:openai@7.8.0`
+  - `@openai/openai -> npm:openai@7.38.0`
 - Shared wrappers:
   - `supabase/functions/_shared/openai_structured.ts`
   - `supabase/functions/_shared/openai_chat.ts`
@@ -487,7 +487,7 @@ Only `OPENAI_API_KEY` is used from the key file. The runner sends fixed syntheti
 
 Provision `HYBRID_OPENAI_CHAT_MODEL=gpt-6-luna` and `PORTAL_OPENAI_CHAT_MODEL=gpt-6-luna` explicitly in each qualified target. Preserve the generic translation model and isolated Portal credentials. Portal V1 cache identity retains the full signed request; V2 retains query/kind reuse. Both bind model/endpoint/embedding identity, reasoning, actual synonym rules and schema, plus the named task-template revision. Update that revision if the task or user prompt template changes. Changed identities miss; old V2 continuations restart before model/database work. No broad Redis deletion is part of migration.
 
-The reviewed Edge dependency baseline also pins AWS SDK 3.1121.0, Supabase JSR 2.112.4, Upstash Redis 1.38.3, Deno Redis 0.41.2, Zod 4.5.4, and Prettier 3.9.6. Redis dependencies remain only for isolated Portal runtimes. TIDAS package routes enqueue database `worker_jobs`; they do not import the JavaScript TIDAS SDK.
+The reviewed Edge #495 runtime dependency baseline pins AWS SDK 3.1152.0, OpenAI 7.38.0, Supabase JS/Functions JS 2.118.0 and Deno Redis 0.42.0 on the unchanged Deno 2.1.4 stack. All direct Supabase consumers match that version and Functions JS declarations retain the mapped alias. Unrelated Upstash Redis 1.38.3, Postgres HTTPS, Zod 4.5.4, TIDAS SDK 0.4.1 and developer CLI/Prettier pins remain outside this five-package update. Redis dependencies remain only for isolated Portal runtimes. TIDAS package routes enqueue database `worker_jobs`; they do not import the JavaScript TIDAS SDK.
 
 ## Required Development Workflow
 
