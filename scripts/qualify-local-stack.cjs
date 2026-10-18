@@ -8,6 +8,8 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { execFileSync, spawn, spawnSync } = require('node:child_process');
 const { terminateOwnedGroup } = require('./stack-qualification/process.cjs');
+const { boundedBody, waitForFixture } = require('./stack-qualification/http.cjs');
+const { collectFailureDiagnostics } = require('./stack-qualification/diagnostics.cjs');
 const {
   ownedRelayTarget,
   createOwnedRelay,
@@ -26,6 +28,9 @@ const {
   freePort,
   runtimeWorkingDirectory,
   runtimeBinaryIdentity,
+  workerVersionIdentity,
+  serveExitIdentity,
+  assertNativeStopped,
   signingFixture,
   asymmetricJwt,
 } = require('./stack-qualification/contracts.cjs');
@@ -457,6 +462,7 @@ async function main() {
       runtimeFixture.cli.readerSource,
       runtimeFixture.edgeRuntime.source,
       ...runtimeFixture.edgeRuntime.binary.sources,
+      ...runtimeFixture.edgeRuntime.worker.sources,
       runtimeFixture.deno.source,
     ]) {
       const url = `https://raw.githubusercontent.com/${source.repository}/${source.ref}/${source.path}`;
@@ -684,7 +690,7 @@ async function main() {
         throw new Error('Actual functions serve never replaced the initial runtime');
       await delay(200);
     }
-    await ready(portalUrl);
+    await ready(portalUrl, 'native');
     const served = JSON.parse(docker(['container', 'inspect', runtimeName]))[0];
     assert.ok(
       served.Config.Env.some((value) => value.includes('PORTAL_SUPABASE_PUBLISHABLE_KEY=')),
@@ -698,12 +704,16 @@ async function main() {
     for (const value of Object.values(servedConfig))
       assert.equal(value.verifyJWT, false, '--no-verify-jwt must select the documented override');
     await portalCases(portalUrl, 'actual-cli-serve', false);
-    serve.kill('SIGINT');
+    assert.equal(serve.exitCode, null, 'Native serve exited before requested shutdown');
+    assert.equal(serve.signalCode, null, 'Native serve signalled before requested shutdown');
+    assert.equal(serve.kill('SIGINT'), true);
     for (let i = 0; i < 100 && serve.exitCode === null && serve.signalCode === null; i++)
       await delay(100);
-    assert.ok(serve.exitCode !== null || serve.signalCode !== null);
-    write('serve-exit.json', { code: serve.exitCode, signal: serve.signalCode });
+    write('serve-exit.json', serveExitIdentity(serve.exitCode, serve.signalCode));
     await cli(['stop', '--no-backup']);
+    const stopped = { containers: ids('container'), volumes: ids('volume') };
+    write('native-stop.json', stopped);
+    assertNativeStopped(stopped);
     await dbRelay.close();
     await apiRelay.close();
     // Real offline two-container slice reuses the exact CLI-produced bootstrap/config, without DB.
@@ -791,7 +801,7 @@ async function main() {
     const pairRelay = await relayTo(pairKong, pairNetwork, 'pair', 8000);
     const port = `127.0.0.1:${pairRelay.snapshot().port}`;
     const pairUrl = `http://${port}/functions/v1/portal`;
-    await ready(pairUrl);
+    await ready(pairUrl, 'offline-pair');
     await portalCases(pairUrl, 'offline-pair', true);
     const jwtUrl = `http://${port}/functions/v1/jwt`;
     const requestTime = Math.floor(Date.now() / 1000);
@@ -811,7 +821,7 @@ async function main() {
         headers: { authorization: `Bearer ${token}`, apikey: synthetic.publishable },
         body: 'native-jwt',
       });
-      await response.text();
+      await recordResponse(response, 'gateway-jwt', label);
       assert.equal(response.status, expected);
       ledger.outcomes.push({ case: `gateway-jwt-${label}`, status: response.status });
     }
@@ -850,17 +860,30 @@ async function main() {
     ledger.outcomes.push({ case: 'worker-cancellation', requestAbort: true, responseCancel: true });
     for (const name of [pairKong, pairRuntime]) docker(['logs', name]);
     ledger.complete = true;
-    async function ready(url) {
-      for (let i = 0; i < 150; i++) {
-        try {
-          const r = await fetch(url, { signal: AbortSignal.timeout(1000) });
-          await r.text();
-          return;
-        } catch {
-          await delay(200);
-        }
-      }
-      throw new Error('Owned gateway did not become ready');
+    async function ready(url, phase) {
+      const observations = [];
+      await waitForFixture(url, {
+        record(observation) {
+          observations.push({
+            ...observation,
+            body: observation.body === undefined ? undefined : redact(observation.body),
+          });
+          write(`readiness-${phase}.json`, observations);
+        },
+      });
+    }
+    async function recordResponse(response, phase, label) {
+      const payload = await boundedBody(response);
+      write(`response-${phase}-${label}.json`, {
+        phase,
+        case: label,
+        status: response.status,
+        bytes: payload.bytes,
+        body: redact(payload.body),
+        truncated: payload.truncated,
+      });
+      assert.equal(payload.truncated, false, 'Fixture response exceeded diagnostic body limit');
+      return payload.body;
     }
     async function portalCases(url, phase, cancellationPhase) {
       const body = Buffer.from('{ "text": "steel 钢", "exact": true }\n');
@@ -879,7 +902,7 @@ async function main() {
           headers: signedHeaders(body, { apikey: synthetic.publishable, ...additional }),
           body,
         });
-        const data = await r.json();
+        const data = JSON.parse(await recordResponse(r, phase, label));
         assert.equal(r.status, expected, `${phase}:${label}`);
         if (expected === 200) {
           assert.equal(data.bodyHash, crypto.createHash('sha256').update(body).digest('base64url'));
@@ -887,8 +910,7 @@ async function main() {
           assert.equal(data.pathname, '/portal');
           assert.equal(data.compatibilityHeaderPresent, false);
           assert.equal(data.authorizationPresent, label === 'legacy-local-anon');
-          assert.equal(data.deno.deno, '2.1.4');
-          assert.equal(data.deno.typescript, '5.6.2');
+          workerVersionIdentity(data.deno, runtimeFixture);
         }
         ledger.outcomes.push({ phase, case: label, status: r.status });
       }
@@ -897,6 +919,10 @@ async function main() {
         body,
         signedHeaders(body, { apikey: synthetic.publishable }),
       );
+      write(`response-${phase}-chunked.json`, {
+        status: chunked.status,
+        body: redact(JSON.stringify(chunked.body)).slice(0, 16384),
+      });
       assert.equal(chunked.status, 200);
       assert.equal(
         chunked.body.bodyHash,
@@ -908,14 +934,14 @@ async function main() {
         headers: signedHeaders(body, { apikey: synthetic.publishable }),
         body: Buffer.concat([body, Buffer.from(' ')]),
       });
-      await changed.text();
+      await recordResponse(changed, phase, 'changed-body');
       assert.equal(changed.status, 400);
       const suffix = await fetch(url + '/extra', {
         method: 'POST',
         headers: signedHeaders(body, { apikey: synthetic.publishable }),
         body,
       });
-      await suffix.text();
+      await recordResponse(suffix, phase, 'cross-path');
       assert.equal(suffix.status, 400);
       ledger.outcomes.push({
         phase,
@@ -925,6 +951,25 @@ async function main() {
       });
     }
   } catch (error) {
+    if (dockerReady) {
+      try {
+        collectFailureDiagnostics({
+          owner,
+          project,
+          write,
+          sanitize: redact,
+          execute: (args) =>
+            spawnSync('docker', args, {
+              env,
+              encoding: 'utf8',
+              timeout: 5000,
+              maxBuffer: args[0] === 'logs' ? 256 * 1024 : 1024 * 1024,
+            }),
+        });
+      } catch (diagnosticError) {
+        ledger.diagnosticFailure = redact(diagnosticError.message);
+      }
+    }
     ledger.failure = { message: error.message, stack: redact(error.stack ?? '') };
     throw error;
   } finally {

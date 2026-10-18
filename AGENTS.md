@@ -40,8 +40,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-19
-lastReviewedCommit: caaf0c7ccb5d5c40392611214019e8499ad89ba4
-lastReviewedNote: 'Edge #496: reviewed Node24 events.once error rejection and the narrow explicit socket-close wait for the lifetime regression. Only expected ECONNRESET is accepted after lifetime proof; timers, no-idle and cleanup assertions remain unchanged. Actual hosted functional qualification is still pending.'
+lastReviewedCommit: bc529ea3d64c761be6c3132e957829fc9bfab2f7
+lastReviewedNote: 'Edge #496: reviewed exact worker version getters separately from compiler/binary identity, concrete fixture readiness at unchanged bounds, bounded pre-cleanup evidence and source-supported normal shutdown/stop inventory. Security/body/JWT/cancellation assertions remain; actual new hosted qualification is pending.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md

@@ -319,3 +319,46 @@ test('both runtime fixtures bind the native image reader and separate binary ver
     );
   }
 });
+
+test('worker metadata has its own exact tagged producer and cannot redefine compiler versions', () => {
+  const expectedSources = {
+    '1.74.3': [
+      'bc7b789a66667e3105f0ca5e0a020a6825ebe476',
+      '3216531f9b8821fe6bb1ea1906d4e524f71393a8',
+      '3798fef25ef6f2824520322bf089f70f72617a4d',
+    ],
+    '1.77.4': [
+      '1a98593cee8882faa9206b8a274496b5e8166935',
+      '0cf2d01e45c5c0e8d33ca741dd07dde73b20a873',
+      'eb2014ed445e81118fc5cf4083e77fd228fc4e45',
+    ],
+  };
+  for (const release of ['1.74.3', '1.77.4']) {
+    const fixture = readJson(`test/fixtures/supabase-edge-runtime-v${release}-deno.json`);
+    assert.deepEqual(fixture.edgeRuntime.worker.reportedVersion, {
+      deno: `supabase-edge-runtime-${release} (compatible with Deno v2.1.4)`,
+      v8: '11.6.189.12',
+      typescript: '5.1.6',
+    });
+    assert.deepEqual(
+      fixture.edgeRuntime.worker.sources.map(
+        ({ repository, ref, path: sourcePath, gitBlobSha }) => ({
+          repository,
+          ref,
+          path: sourcePath,
+          gitBlobSha,
+        }),
+      ),
+      ['ext/runtime/js/bootstrap.js', 'crates/base/src/runtime/mod.rs', 'deno/versions.rs'].map(
+        (sourcePath, index) => ({
+          repository: 'supabase/edge-runtime',
+          ref: `v${release}`,
+          path: sourcePath,
+          gitBlobSha: expectedSources[release][index],
+        }),
+      ),
+    );
+    assert.equal(fixture.deno.version, '2.1.4');
+    assert.equal(fixture.deno.bundledTypeScriptVersion, '5.6.2');
+  }
+});

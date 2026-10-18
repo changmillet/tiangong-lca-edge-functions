@@ -141,6 +141,25 @@ function runtimeBinaryIdentity(output, fixture) {
   assert.equal(target, expected.target, 'Edge Runtime binary target differs');
   return { crateVersion, denoVersion, profile, target };
 }
+function workerVersionIdentity(actual, fixture) {
+  assert.deepEqual(
+    actual,
+    fixture.edgeRuntime.worker.reportedVersion,
+    'Worker version metadata differs',
+  );
+  return actual;
+}
+function serveExitIdentity(code, signal) {
+  assert.ok(
+    ((code === 0 || code === 130) && signal === null) || (code === null && signal === 'SIGINT'),
+    'Unexpected native serve termination',
+  );
+  return { code, signal };
+}
+function assertNativeStopped(inventory) {
+  assert.deepEqual(inventory.containers, [], 'Native stop left project containers');
+  assert.deepEqual(inventory.volumes, [], 'Native stop --no-backup left project volumes');
+}
 async function chunkedPost(url, body, headers) {
   const request = http.request(url, { method: 'POST', headers });
   const result = new Promise((resolve, reject) => {
@@ -183,6 +202,9 @@ module.exports = {
   freePort,
   runtimeWorkingDirectory,
   runtimeBinaryIdentity,
+  workerVersionIdentity,
+  serveExitIdentity,
+  assertNativeStopped,
   signingFixture,
   asymmetricJwt,
 };

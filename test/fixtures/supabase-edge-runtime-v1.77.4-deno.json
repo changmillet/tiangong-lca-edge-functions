@@ -55,6 +55,36 @@
           "url": "https://github.com/supabase/edge-runtime/blob/v1.77.4/Dockerfile"
         }
       ]
+    },
+    "worker": {
+      "reportedVersion": {
+        "deno": "supabase-edge-runtime-1.77.4 (compatible with Deno v2.1.4)",
+        "v8": "11.6.189.12",
+        "typescript": "5.1.6"
+      },
+      "sources": [
+        {
+          "repository": "supabase/edge-runtime",
+          "ref": "v1.77.4",
+          "path": "ext/runtime/js/bootstrap.js",
+          "gitBlobSha": "1a98593cee8882faa9206b8a274496b5e8166935",
+          "url": "https://github.com/supabase/edge-runtime/blob/v1.77.4/ext/runtime/js/bootstrap.js"
+        },
+        {
+          "repository": "supabase/edge-runtime",
+          "ref": "v1.77.4",
+          "path": "crates/base/src/runtime/mod.rs",
+          "gitBlobSha": "0cf2d01e45c5c0e8d33ca741dd07dde73b20a873",
+          "url": "https://github.com/supabase/edge-runtime/blob/v1.77.4/crates/base/src/runtime/mod.rs"
+        },
+        {
+          "repository": "supabase/edge-runtime",
+          "ref": "v1.77.4",
+          "path": "deno/versions.rs",
+          "gitBlobSha": "eb2014ed445e81118fc5cf4083e77fd228fc4e45",
+          "url": "https://github.com/supabase/edge-runtime/blob/v1.77.4/deno/versions.rs"
+        }
+      ]
     }
   },
   "deno": {
