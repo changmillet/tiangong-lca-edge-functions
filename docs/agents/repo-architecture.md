@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-19
-lastReviewedCommit: 156a0b186e250750d646402e5b50f71cc0585eaf
-lastReviewedNote: 'Edge #496: reviewed separate image-release and binary crate/Deno identities, actual native CLI manifest/reader provenance, full supported Linux output checks and negative controls. Existing runtime/image/security assertions remain; complete hosted lifecycle and functional/cancellation proof is still pending.'
+lastReviewedCommit: caaf0c7ccb5d5c40392611214019e8499ad89ba4
+lastReviewedNote: 'Edge #496: reviewed Node24 events.once error rejection and the narrow explicit socket-close wait for the lifetime regression. Only expected ECONNRESET is accepted after lifetime proof; timers, no-idle and cleanup assertions remain unchanged. Actual hosted functional qualification is still pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml

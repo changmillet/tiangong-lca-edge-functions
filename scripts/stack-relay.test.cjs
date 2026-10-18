@@ -76,14 +76,17 @@ test(
       lifetimeMs: 80,
     });
     const client = net.createConnection({ host: '127.0.0.1', port: relay.snapshot().port });
-    client.on('error', () => {});
+    const clientErrors = [];
+    client.on('error', (error) => clientErrors.push(error));
     client.on('data', () => {});
+    const closed = new Promise((resolve) => client.once('close', resolve));
     let heartbeat;
     try {
       await once(client, 'connect');
       heartbeat = setInterval(() => client.write('still-active'), 10);
-      await once(client, 'close');
+      await closed;
       assert.ok(relay.snapshot().failures.some((failure) => failure.phase === 'lifetime'));
+      for (const error of clientErrors) assert.equal(error.code, 'ECONNRESET');
       assert.equal(
         relay.snapshot().failures.some((failure) => failure.phase === 'idle'),
         false,
