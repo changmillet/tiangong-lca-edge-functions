@@ -23,9 +23,9 @@ checkPaths:
   - supabase/config.toml
   - supabase/.env.example
   - test.example.http
-lastReviewedAt: 2026-10-18
-lastReviewedCommit: 8bbe26dbd1a15030c7ec0b60c570f2f62ffb365d
-lastReviewedNote: 'Edges #495/#496: read the complete six-document review-plan set against combined 8bbe26d, corrected composition and observed local-proof descriptions, and bound the hosted workflow to existing governance; hosted gateway/lifecycle execution and independent final review remain pending.'
+lastReviewedAt: 2026-10-19
+lastReviewedCommit: 156a0b186e250750d646402e5b50f71cc0585eaf
+lastReviewedNote: 'Edge #496: reviewed separate image-release and binary crate/Deno identities, actual native CLI manifest/reader provenance, full supported Linux output checks and negative controls. Existing runtime/image/security assertions remain; complete hosted lifecycle and functional/cancellation proof is still pending.'
 ---
 
 # TianGong-LCA-Edge-Functions
@@ -69,7 +69,7 @@ These files are the low-token entry path for repo ownership, branch and deploy r
 - Deno 2.1.4; `deno --version` must report bundled TypeScript 5.6.2. `.tool-versions` is the shared local/CI version source.
 - Node.js 24.19.0 and pnpm 11.24.0 for auxiliary Supabase CLI, formatting, and validation wrappers
 - Docker Engine (required if you run local Supabase stack)
-- Supabase CLI 2.121.0, installed through this repository's `supabase` dev dependency; it embeds Edge Runtime 1.77.4, whose tagged source declares Deno 2.1.4; hosted qualification separately records the actual runtime identity
+- Supabase CLI 2.121.0, installed through this repository's `supabase` dev dependency; it selects the default Edge Runtime image release 1.77.4, whose tagged source declares Deno 2.1.4. The binary reports its separate crate version 0.1.0; hosted qualification binds both identities to source and the actual image digest
 
 Initialize/refresh Node dependencies:
 

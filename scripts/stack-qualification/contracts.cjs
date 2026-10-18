@@ -126,6 +126,21 @@ function runtimeWorkingDirectory(runtime, fixture) {
   );
   return runtime.Config.WorkingDir;
 }
+function runtimeBinaryIdentity(output, fixture) {
+  const match =
+    /^edge-runtime ([0-9]+\.[0-9]+\.[0-9]+)\ndeno ([0-9]+\.[0-9]+\.[0-9]+) \(([^,()\n]+), ([^()\n]+)\)\n$/u.exec(
+      output,
+    );
+  assert.ok(match, 'Unexpected Edge Runtime version output');
+  assert.equal(match[0], output, 'Unexpected trailing Edge Runtime version output');
+  const [, crateVersion, denoVersion, profile, target] = match;
+  const expected = fixture.edgeRuntime.binary;
+  assert.equal(crateVersion, expected.version, 'Edge Runtime crate version differs');
+  assert.equal(denoVersion, fixture.edgeRuntime.denoVersion, 'Embedded Deno version differs');
+  assert.equal(profile, expected.profile, 'Edge Runtime build profile differs');
+  assert.equal(target, expected.target, 'Edge Runtime binary target differs');
+  return { crateVersion, denoVersion, profile, target };
+}
 async function chunkedPost(url, body, headers) {
   const request = http.request(url, { method: 'POST', headers });
   const result = new Promise((resolve, reject) => {
@@ -167,6 +182,7 @@ module.exports = {
   chunkedPost,
   freePort,
   runtimeWorkingDirectory,
+  runtimeBinaryIdentity,
   signingFixture,
   asymmetricJwt,
 };

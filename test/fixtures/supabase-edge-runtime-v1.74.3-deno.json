@@ -9,6 +9,13 @@
       "path": "apps/cli-go/pkg/config/templates/Dockerfile",
       "gitBlobSha": "f24a2d104363a974b44c0c6b711e12bd19b62376",
       "url": "https://github.com/supabase/cli/blob/v2.116.0/apps/cli-go/pkg/config/templates/Dockerfile"
+    },
+    "readerSource": {
+      "repository": "supabase/cli",
+      "ref": "v2.116.0",
+      "path": "apps/cli/src/shared/services/dockerfile-images.ts",
+      "gitBlobSha": "d9982ddf9f27524a5c1ded67adc7d875a004bb47",
+      "url": "https://github.com/supabase/cli/blob/v2.116.0/apps/cli/src/shared/services/dockerfile-images.ts"
     }
   },
   "edgeRuntime": {
@@ -20,6 +27,34 @@
       "path": "deno/Cargo.toml",
       "gitBlobSha": "a71e701672fc20c82d9d08f71f8bf157a9dbdd3b",
       "url": "https://github.com/supabase/edge-runtime/blob/v1.74.3/deno/Cargo.toml"
+    },
+    "binary": {
+      "version": "0.1.0",
+      "profile": "release",
+      "target": "x86_64-unknown-linux-gnu",
+      "sources": [
+        {
+          "repository": "supabase/edge-runtime",
+          "ref": "v1.74.3",
+          "path": "cli/Cargo.toml",
+          "gitBlobSha": "73f582905c73d58481f0fec2311b4f8d1a0a544e",
+          "url": "https://github.com/supabase/edge-runtime/blob/v1.74.3/cli/Cargo.toml"
+        },
+        {
+          "repository": "supabase/edge-runtime",
+          "ref": "v1.74.3",
+          "path": "cli/src/flags.rs",
+          "gitBlobSha": "136b3e0a9793cea7fd0c463978446ad886ddbf9b",
+          "url": "https://github.com/supabase/edge-runtime/blob/v1.74.3/cli/src/flags.rs"
+        },
+        {
+          "repository": "supabase/edge-runtime",
+          "ref": "v1.74.3",
+          "path": "Dockerfile",
+          "gitBlobSha": "8044ba168b46f28a03d846304cb490d956e384c4",
+          "url": "https://github.com/supabase/edge-runtime/blob/v1.74.3/Dockerfile"
+        }
+      ]
     }
   },
   "deno": {

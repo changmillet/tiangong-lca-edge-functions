@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-18
-lastReviewedCommit: 4832bfd28463be210abc07f306bc96b9656f7b91
-lastReviewedNote: 'Edge #496: reviewed the actual native TypeScript CLI routes, auth-enabled signing-key loading with gotrue excluded, generated RSA/public-only JWKS invariants and producer regression. Both native starts passed at 4832bfd; complete hosted lifecycle and functional/cancellation proof remain mandatory and pending.'
+lastReviewedAt: 2026-10-19
+lastReviewedCommit: 156a0b186e250750d646402e5b50f71cc0585eaf
+lastReviewedNote: 'Edge #496: reviewed separate image-release and binary crate/Deno identities, actual native CLI manifest/reader provenance, full supported Linux output checks and negative controls. Existing runtime/image/security assertions remain; complete hosted lifecycle and functional/cancellation proof is still pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -282,6 +282,8 @@ The selected developer target is Prettier 3.9.10 / Supabase CLI 2.121.0, whose d
 The workflow initializes its isolated root in a runner step using the quoted `RUNNER_TEMP` value and `GITHUB_ENV`, so the driver, always-run recovery and artifact upload share one path. GitHub does not allow the `runner` context in job-level `env`; validate workflow expression contexts before scheduling the matrix. An invalid workflow with zero jobs is no CLI/runtime execution evidence.
 
 Both selected native TypeScript CLI start routes read `auth.signing_keys_path` only when `auth.enabled=true`. The synthetic fixture enables that configuration and keeps `gotrue` explicitly excluded, so the generated RSA file supplies the actual runtime JWKS without starting the Auth service. Preserve the generated key ID, public-only JWKS check and valid/bad/expired JWT assertions. Both hosted variants must execute these checks successfully.
+
+Image release tags and the binary crate version are separate identities. Both selected runtime images print crate `0.1.0` and Deno `2.1.4`; the harness validates the complete supported Linux release output against independently tagged Cargo/flags/Dockerfile evidence and records `runtime-binary-identity.json`. Keep the CLI native image-manifest/reader binding, exact image release tag, pulled digest and actual container image equality checks. The candidate native TypeScript CLI reads its own shared-services Dockerfile; the baseline reader imports the retained Go-template Dockerfile as text.
 
 Docker 28 internal bridges do not publish host ports. All fixture networks remain internal, and host CLI/client traffic uses loopback-only opaque TCP relays to the exact UUID-labelled container ID and sole internal network/IP. The relay binds its first verified endpoint and rejects replacement, preserves bytes/backpressure/half-close/abort, has bounded idle/lifetime limits, and records counters plus closed listeners. Internal and independent recovery both verify port release. Startup captures bounded owned DB state/port mappings and sanitized logs before CLI failure can remove the container. Native CLI start/serve/stop and all gateway/cancellation assertions remain required; a relay does not replace those proofs.
 

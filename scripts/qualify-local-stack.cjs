@@ -25,6 +25,7 @@ const {
   chunkedPost,
   freePort,
   runtimeWorkingDirectory,
+  runtimeBinaryIdentity,
   signingFixture,
   asymmetricJwt,
 } = require('./stack-qualification/contracts.cjs');
@@ -453,7 +454,9 @@ async function main() {
         ref: sourceFixture.ref,
       })),
       runtimeFixture.cli.source,
+      runtimeFixture.cli.readerSource,
       runtimeFixture.edgeRuntime.source,
+      ...runtimeFixture.edgeRuntime.binary.sources,
       runtimeFixture.deno.source,
     ]) {
       const url = `https://raw.githubusercontent.com/${source.repository}/${source.ref}/${source.path}`;
@@ -624,7 +627,12 @@ async function main() {
     docker(['cp', `${runtimeName}:/root/index.ts`, path.join(root, 'bootstrap.ts')]);
     docker(['cp', `${kongName}:/home/kong/kong.yml`, path.join(root, 'kong-full.yml')]);
     const runtimeVersion = docker(['exec', runtimeName, 'edge-runtime', '--version']);
-    assert.ok(runtimeVersion.includes(selected.runtime));
+    write('runtime-binary-identity.json', {
+      ...runtimeBinaryIdentity(runtimeVersion, runtimeFixture),
+      stdout: runtimeVersion,
+      stdoutSha256: hash(runtimeVersion),
+      image: ledger.images.runtime,
+    });
     const bootstrap = fs.readFileSync(path.join(root, 'bootstrap.ts'));
     const fullKong = fs.readFileSync(path.join(root, 'kong-full.yml'), 'utf8');
     fs.writeFileSync(path.join(evidence, 'bootstrap.ts'), bootstrap);

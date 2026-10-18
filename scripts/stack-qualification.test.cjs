@@ -197,3 +197,37 @@ test('fixture loads its configured signing key while excluding the Auth service'
     /cli\(\['start', '--debug', '--exclude', excludes, '--network-id', network\]\)/u,
   );
 });
+
+test('runtime binary identity separates the image release from crate and embedded Deno versions', () => {
+  const { runtimeBinaryIdentity } = require('./stack-qualification/contracts.cjs');
+  const actual = 'edge-runtime 0.1.0\ndeno 2.1.4 (release, x86_64-unknown-linux-gnu)\n';
+  for (const release of ['1.74.3', '1.77.4']) {
+    const fixture = JSON.parse(
+      fs.readFileSync(
+        path.join(__dirname, `../test/fixtures/supabase-edge-runtime-v${release}-deno.json`),
+        'utf8',
+      ),
+    );
+    assert.equal(fixture.edgeRuntime.version, release);
+    assert.deepEqual(runtimeBinaryIdentity(actual, fixture), {
+      crateVersion: '0.1.0',
+      denoVersion: '2.1.4',
+      profile: 'release',
+      target: 'x86_64-unknown-linux-gnu',
+    });
+    for (const invalid of [
+      actual.replace('0.1.0', release),
+      actual.replace('2.1.4', '2.2.0'),
+      actual.replace('release', 'debug'),
+      actual.replace('x86_64', 'aarch64'),
+      actual.replace('edge-runtime ', ''),
+      actual.split('\n')[0] + '\n',
+      actual + 'unbound extra output\n',
+      actual + '\n',
+      actual.trimEnd(),
+      'prefix ' + actual,
+      actual.replaceAll('\n', '\r\n'),
+    ])
+      assert.throws(() => runtimeBinaryIdentity(invalid, fixture));
+  }
+});

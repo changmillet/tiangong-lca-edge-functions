@@ -130,7 +130,7 @@ test('binds the Supabase CLI image to reviewed Edge Runtime and Deno source evid
       {
         repository: 'supabase/cli',
         ref: 'v2.121.0',
-        path: 'apps/cli-go/pkg/config/templates/Dockerfile',
+        path: 'apps/cli/src/shared/services/Dockerfile',
         gitBlobSha: '563c96ccd7ce0a7d1f4052750b391a1a46ca3836',
       },
       {
@@ -245,4 +245,77 @@ test('binds CI to exact Deno and auxiliary Node runtimes', () => {
   assert.match(ci, /run:\s*pnpm install --frozen-lockfile/u);
   assert.match(ci, /run:\s*pnpm check/u);
   assert.match(supabaseConfig, /\[edge_runtime\][\s\S]*?deno_version\s*=\s*2/u);
+});
+
+test('both runtime fixtures bind the native image reader and separate binary version producers', () => {
+  for (const [release, readerBlob, dockerfileBlob] of [
+    [
+      '1.74.3',
+      'd9982ddf9f27524a5c1ded67adc7d875a004bb47',
+      '8044ba168b46f28a03d846304cb490d956e384c4',
+    ],
+    [
+      '1.77.4',
+      '377f78a0344c2c004e24621f8f86f7f6e4084576',
+      'ff1c4d68f27e76b09263e45a0cc4496fbf71a034',
+    ],
+  ]) {
+    const fixture = readJson(`test/fixtures/supabase-edge-runtime-v${release}-deno.json`);
+    assert.equal(fixture.cli.edgeRuntimeVersion, release);
+    assert.equal(fixture.edgeRuntime.version, release);
+    assert.equal(fixture.cli.source.repository, 'supabase/cli');
+    assert.equal(fixture.cli.source.ref, `v${fixture.cli.version}`);
+    assert.equal(
+      fixture.cli.source.path,
+      release === '1.74.3'
+        ? 'apps/cli-go/pkg/config/templates/Dockerfile'
+        : 'apps/cli/src/shared/services/Dockerfile',
+    );
+    assert.equal(
+      fixture.cli.source.gitBlobSha,
+      release === '1.74.3'
+        ? 'f24a2d104363a974b44c0c6b711e12bd19b62376'
+        : '563c96ccd7ce0a7d1f4052750b391a1a46ca3836',
+    );
+    assert.equal(fixture.cli.readerSource.repository, 'supabase/cli');
+    assert.equal(fixture.cli.readerSource.ref, `v${fixture.cli.version}`);
+    assert.equal(
+      fixture.cli.readerSource.path,
+      'apps/cli/src/shared/services/dockerfile-images.ts',
+    );
+    assert.equal(fixture.cli.readerSource.gitBlobSha, readerBlob);
+    assert.equal(fixture.edgeRuntime.binary.version, '0.1.0');
+    assert.equal(fixture.edgeRuntime.binary.profile, 'release');
+    assert.equal(fixture.edgeRuntime.binary.target, 'x86_64-unknown-linux-gnu');
+    assert.deepEqual(
+      fixture.edgeRuntime.binary.sources.map(
+        ({ repository, ref, path: sourcePath, gitBlobSha }) => ({
+          repository,
+          ref,
+          path: sourcePath,
+          gitBlobSha,
+        }),
+      ),
+      [
+        {
+          repository: 'supabase/edge-runtime',
+          ref: `v${release}`,
+          path: 'cli/Cargo.toml',
+          gitBlobSha: '73f582905c73d58481f0fec2311b4f8d1a0a544e',
+        },
+        {
+          repository: 'supabase/edge-runtime',
+          ref: `v${release}`,
+          path: 'cli/src/flags.rs',
+          gitBlobSha: '136b3e0a9793cea7fd0c463978446ad886ddbf9b',
+        },
+        {
+          repository: 'supabase/edge-runtime',
+          ref: `v${release}`,
+          path: 'Dockerfile',
+          gitBlobSha: dockerfileBlob,
+        },
+      ],
+    );
+  }
 });

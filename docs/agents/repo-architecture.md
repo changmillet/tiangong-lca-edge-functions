@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-18
-lastReviewedCommit: 4832bfd28463be210abc07f306bc96b9656f7b91
-lastReviewedNote: 'Edge #496: reviewed the actual native TypeScript CLI routes, auth-enabled signing-key loading with gotrue excluded, generated RSA/public-only JWKS invariants and producer regression. Both native starts passed at 4832bfd; complete hosted lifecycle and functional/cancellation proof remain mandatory and pending.'
+lastReviewedAt: 2026-10-19
+lastReviewedCommit: 156a0b186e250750d646402e5b50f71cc0585eaf
+lastReviewedNote: 'Edge #496: reviewed separate image-release and binary crate/Deno identities, actual native CLI manifest/reader provenance, full supported Linux output checks and negative controls. Existing runtime/image/security assertions remain; complete hosted lifecycle and functional/cancellation proof is still pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
