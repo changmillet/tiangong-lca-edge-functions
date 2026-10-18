@@ -35,8 +35,8 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-16
-lastReviewedCommit: fc82dfe3e4000ebc3df822830e1303ef03bff575
+lastReviewedAt: 2026-10-18
+lastReviewedCommit: ebdc3631976c56db8382fd8602fd5ca2730852bc
 lastReviewedNote: 'Reviewed for Edge #482: dependency-input CI reuses the canonical secretless gate; discovery, security, exact runtime qualification and deployment remain separate.'
 related:
   - ../../AGENTS.md
@@ -258,3 +258,5 @@ Run `test/portal_brand_scope_test.ts` with the retained Hybrid contract suite on
 `portal_brand_scope_test.ts`, `portal_hybrid_search_v1_test.ts` and `portal_data_product_results_v1_test.ts` cover canonical signed scope, strict legacy/new wire separation, the exact scoped RPC and parameter, rejection of legacy DTO fallback, and LCIA revalidation before cache expiry. Run `pnpm check` with the repository Node and Deno versions, preserving the existing HMAC, replay/admission, deadlines, provider and publication regressions. Hosted Database/Edge/Portal compatibility, paired brand deployments, cutover and cache invalidation remain separate release receipts; local success is not deployment.
 
 Independent export changes require default-format/read-versus-enqueue tests, terminal-poll reuse, live actor revocation, bounded page signing, canonical audit-path reuse, and invalid binding/size/hash/role rejection. Pair the full Edge lint/check gate with Database admission and actual Worker full-library export proof. No test may obtain production deployment authority from this contract.
+
+All-unit query reader changes must prove opaque task/calculation/method IDs and the observed non-RFC-variant build ID remain readable, including a numerical zero. Preserve rejection of missing IDs, snapshot or method mismatch, unsafe chunk paths and modified index/chunk bytes. The command-level fixture must bind its registered digest and reject a changed job ID before returning values.

@@ -138,6 +138,66 @@ Deno.test('all-unit query v1 remains readable without method versions', async ()
   );
 });
 
+Deno.test(
+  'all-unit query reads opaque IDs and preserves snapshot and method identity',
+  async () => {
+    const opaqueImpacts = [{ impact_id: 'climate-change', impact_version: 'v1', impact_index: 0 }];
+    const bytes = await gzip(`${JSON.stringify(record(0, 'climate-change', 'v1', 0))}\n`);
+    for (const jobId of ['9e353806-c44c-49c5-d9d6-7c0b6f334c1c', 'task:opaque']) {
+      const document = {
+        ...v2Document(bytes, await sha256Hex(bytes)),
+        snapshotId: 'snapshot:opaque',
+        jobId,
+        processCount: 1,
+        impactCount: 1,
+      };
+      document.calculationBundle.calculationId = 'calculation:opaque';
+      Object.assign(document.lciaChunks[0], { recordCount: 1, lastProcessIndex: 0 });
+      const options = {
+        expectedFormat: ALL_UNIT_QUERY_V2_FORMAT,
+        snapshotId: 'snapshot:opaque',
+        processCount: 1,
+        impacts: opaqueImpacts,
+      };
+      const parsed = parseAllUnitQueryArtifact(document, options);
+      assert(parsed.ok);
+      const column = await readImpactColumn(parsed.data, opaqueImpacts, 0, [0], () =>
+        Promise.resolve({ ok: true, data: bytes }),
+      );
+      assert(column.ok);
+      assertEquals(column.data.get(0), 0);
+      assertEquals(
+        parseAllUnitQueryArtifact(document, { ...options, snapshotId: 'another-snapshot' }),
+        { ok: false, error: 'query_artifact_snapshot_mismatch' },
+      );
+      const wrongMethod = await readImpactColumn(
+        parsed.data,
+        [{ ...opaqueImpacts[0], impact_id: 'another-method' }],
+        0,
+        [0],
+        () => Promise.resolve({ ok: true, data: bytes }),
+      );
+      assertEquals(wrongMethod.ok, false);
+      for (const invalidId of ['', '   ', null, 123]) {
+        assertEquals(
+          parseAllUnitQueryArtifact({ ...document, jobId: invalidId }, options).ok,
+          false,
+        );
+        assertEquals(
+          parseAllUnitQueryArtifact(
+            {
+              ...document,
+              calculationBundle: { ...document.calculationBundle, calculationId: invalidId },
+            },
+            options,
+          ).ok,
+          false,
+        );
+      }
+    }
+  },
+);
+
 function record(processIndex: number, id: string, version: string, meanAmount: number) {
   return { processIndex, method: { id, version }, meanAmount };
 }

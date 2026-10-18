@@ -1,7 +1,7 @@
 version: 1
 layout: repo
-lastReviewedAt: '2026-10-16'
-lastReviewedCommit: 'fc82dfe3e4000ebc3df822830e1303ef03bff575'
+lastReviewedAt: '2026-10-18'
+lastReviewedCommit: 'ebdc3631976c56db8382fd8602fd5ca2730852bc'
 lastReviewedNote: 'Reviewed Edge #482 dependency monitoring coverage and scoped secretless CI; existing runtime, deployment and source review obligations remain unchanged.'
 
 # Keep deterministic governance facts here.

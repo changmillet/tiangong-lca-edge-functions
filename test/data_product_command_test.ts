@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from 'jsr:@std/assert';
+import { assert, assertEquals, assertThrows } from 'jsr:@std/assert';
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.112.4';
 
 import type { ActorContext } from '../supabase/functions/_shared/command_runtime/actor_context.ts';
@@ -1957,7 +1957,7 @@ Deno.test('executeDataProductCommand preview_package reads a verified v2 LCIA ch
     version: 2,
     format: 'all-unit-query:v2',
     snapshotId,
-    jobId: TEST_BUILD_ID,
+    jobId: '9e353806-c44c-49c5-d9d6-7c0b6f334c1c',
     processCount: 1,
     impactCount: 1,
     calculationBundle: {
@@ -2076,6 +2076,30 @@ Deno.test('executeDataProductCommand preview_package reads a verified v2 LCIA ch
     assertEquals(data.detailPage.status, 'ready');
     assertEquals(data.detailPage.rows[0].value, 17.5);
   }
+  // The persisted digest binds the complete query document, including its job ID.
+  // Replacing that identity must still fail before any LCIA value is returned.
+  const jobOffset = new TextDecoder().decode(queryBytes).indexOf('9e353806');
+  queryBytes[jobOffset] = '8'.charCodeAt(0);
+  const tampered = await executeDataProductCommand(
+    { action: 'preview_package', packageId: TEST_PACKAGE_ID, impactCategoryId: impactId },
+    fakeActor,
+    repository,
+  );
+  assert(tampered.ok);
+  const tamperedData = (
+    tampered.body as {
+      data: {
+        detailPage: { status: string; rows: Array<{ value: number | null }> };
+        previewWarnings: Array<{ code: string }>;
+      };
+    }
+  ).data;
+  assertEquals(tamperedData.detailPage.status, 'unavailable');
+  assertEquals(tamperedData.detailPage.rows[0].value, null);
+  assertEquals(
+    tamperedData.previewWarnings[0].code,
+    'result_projection_artifact_integrity_invalid',
+  );
 });
 
 async function sha256HexForTest(bytes: Uint8Array): Promise<string> {
