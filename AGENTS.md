@@ -94,7 +94,7 @@ Keep these entry-level facts in `AGENTS.md`. Use `README.md` and `docs/agents/re
 
 - authoritative runtime/compiler: Deno `2.1.4` with its actual bundled TypeScript `5.6.2`, matching Supabase CLI `2.116.0` and Edge Runtime `1.74.3`; this repository does not install or claim TypeScript 7
 - auxiliary package manager/runtime: pnpm `11.24.0` on Node `24.19.0`, retained for the exact Supabase CLI, Prettier, and Node validation wrappers only
-- latest reviewed import graph: AWS SDK `3.1152.0`, OpenAI `7.38.0`, Supabase JSR `2.118.0`, Upstash Redis `1.38.3`, Deno Redis `0.42.0`, Zod `4.5.4`, and Prettier `3.9.6`; every Functions JS type import must use the mapped `@supabase/functions-js/edge-runtime.d.ts` alias, while any direct JSR, npm, HTTPS, or other `@supabase/functions-js` specifier is forbidden; `pnpm outdated` and exact-Deno `deno outdated --latest` must remain empty
+- latest reviewed import graph: AWS SDK `3.1152.0`, OpenAI `7.38.0`, Supabase JSR `2.118.0`, Upstash Redis `1.38.3`, Deno Redis `0.42.0`, Zod `4.6.7`, and Prettier `3.9.6`; every Functions JS type import must use the mapped `@supabase/functions-js/edge-runtime.d.ts` alias, while any direct JSR, npm, HTTPS, or other `@supabase/functions-js` specifier is forbidden; `pnpm outdated` and exact-Deno `deno outdated --latest` must remain empty
 - local serve command: `pnpm start`
 - baseline local validation: non-mutating `pnpm lint` and canonical `pnpm check`
 - dependency-input PRs to `dev` and `main` reuse the secretless `CI` workflow; monitoring scope, security routing and remaining URL/toolchain pins are recorded in `docs/agents/repo-validation.md`

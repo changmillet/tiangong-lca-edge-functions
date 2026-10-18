@@ -16,16 +16,17 @@ test('checks the exact inventory through one bounded shared graph', () => {
   );
   const targets = discoverTargets();
 
-  assert.equal(targets.length, 164);
+  assert.equal(targets.length, 165);
   assert.ok(targets.includes('test/runtime_sdk_wire_test.ts'));
   assert.ok(targets.includes('test/supabase_sdk_wire_test.ts'));
+  assert.ok(targets.includes('test/zod_consumer_compatibility_test.ts'));
   assert.deepEqual(targets, [...new Set(targets)].sort());
   assert.equal(
     targets.some((target) => target.includes('/antchain_')),
     false,
   );
-  // Includes the Portal request proof (#473) and two installed-SDK wire roots (#495).
-  assert.equal(targets.filter((target) => target.startsWith('test/')).length, 87);
+  // Includes Portal request proof (#473), two SDK wire roots and Zod consumers (#495).
+  assert.equal(targets.filter((target) => target.startsWith('test/')).length, 88);
 
   const batches = buildCheckBatches(targets);
   assert.equal(MAX_ROOTS_PER_BATCH, 200);

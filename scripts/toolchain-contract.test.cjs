@@ -68,7 +68,7 @@ test('pins the latest reviewed Edge-compatible runtime dependency graph', () => 
     '@upstash/redis': 'https://esm.sh/@upstash/redis@1.38.3',
     postgres: 'https://deno.land/x/postgresjs@v3.4.8/mod.js',
     redis: 'jsr:@db/redis@0.42.0',
-    zod: 'npm:/zod@4.5.4',
+    zod: 'npm:/zod@4.6.7',
   });
 
   const directSupabaseVersions = new Set();
