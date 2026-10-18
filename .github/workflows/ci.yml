@@ -16,6 +16,14 @@ on:
       - .github/dependabot.yml
       - .github/workflows/**
       - scripts/dependency-ci-contract.test.cjs
+      - scripts/qualify-local-stack.cjs
+      - scripts/stack-qualification/**
+      - scripts/stack-*.test.cjs
+      - test/fixtures/stack-qualification/**
+      - test/fixtures/supabase-cli-*-functions-transport.json
+      - test/fixtures/supabase-edge-runtime-*-deno.json
+      - supabase/functions/_shared/portal_hmac.ts
+      - supabase/functions/_shared/portal_public_transport.ts
   workflow_dispatch:
 
 permissions:
