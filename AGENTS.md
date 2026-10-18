@@ -40,8 +40,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 2c7aea584b674b46507c2f0e533395db2c312fe6
-lastReviewedNote: 'Edge #496: reviewed latest CLI/formatter target and exact upstream source bindings, real hosted qualification harness and owned cleanup; local checks do not claim hosted execution or global freshness before #495 composition.'
+lastReviewedCommit: 5c9bf5e0878bf38de11aebcffc646afaf9e69cb4
+lastReviewedNote: 'Edges #495/#496: composed the qualified runtime/Zod graph with the source-bound latest CLI/formatter/default-runtime target; hosted gateway/lifecycle qualification and final combined review remain pending.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
@@ -94,7 +94,7 @@ Keep these entry-level facts in `AGENTS.md`. Use `README.md` and `docs/agents/re
 
 - authoritative runtime/compiler: Deno `2.1.4` with its actual bundled TypeScript `5.6.2`, matching the selected Supabase CLI `2.121.0` / Edge Runtime `1.77.4` qualification target; this repository does not install or claim TypeScript 7
 - auxiliary package manager/runtime: pnpm `11.24.0` on Node `24.19.0`, retained for the exact Supabase CLI, Prettier, and Node validation wrappers only
-- latest reviewed import graph: AWS SDK `3.1121.0`, OpenAI `7.8.0`, Supabase JSR `2.112.4`, Upstash Redis `1.38.3`, Deno Redis `0.41.2`, Zod `4.5.4`, and Prettier `3.9.10`; every Functions JS type import must use the mapped `@supabase/functions-js/edge-runtime.d.ts` alias, while any direct JSR, npm, HTTPS, or other `@supabase/functions-js` specifier is forbidden; `pnpm outdated` and exact-Deno `deno outdated --latest` must remain empty
+- latest reviewed import graph: AWS SDK `3.1152.0`, OpenAI `7.38.0`, Supabase JSR `2.118.0`, Upstash Redis `1.38.3`, Deno Redis `0.42.0`, Zod `4.6.7`, and Prettier `3.9.10`; every Functions JS type import must use the mapped `@supabase/functions-js/edge-runtime.d.ts` alias, while any direct JSR, npm, HTTPS, or other `@supabase/functions-js` specifier is forbidden; `pnpm outdated` and exact-Deno `deno outdated --latest` must remain empty
 - local serve command: `pnpm start`
 - required stack qualification: `pnpm qualify:stack` runs only on an owned Docker-enabled hosted Linux runner; source fixtures and local checks do not establish a hosted stack pass
 - baseline local validation: non-mutating `pnpm lint` and canonical `pnpm check`
@@ -174,7 +174,7 @@ Do not infer routine workflow from GitHub default-branch UI alone.
 - Raw Hybrid omitted/latest requests reject page_size or match_count above 100 and integer-range pagination before rewrite, embedding or RPC work. Matched 200-candidate and Open Data routes retain their own contracts. Database SQLSTATE `22023` maps to HTTP 400; other RPC failures retain HTTP 500.
 - The bounded full-text selector always reserves the original query and alternates English/Chinese model aliases so OR expansion cannot starve English terms. This does not restrict source-document languages or change the legacy selector.
 - do not invent schema truth or migration history in this repo
-- do not bypass `supabase/functions/deno.json` with a direct JSR, npm, HTTPS, or other `@supabase/functions-js` specifier; all Functions JS type imports use the exact mapped alias so local checks and remote bundles resolve 2.112.4
+- do not bypass `supabase/functions/deno.json` with a direct JSR, npm, HTTPS, or other `@supabase/functions-js` specifier; all Functions JS type imports use the exact mapped alias so local checks and remote bundles resolve 2.118.0
 - do not interpret `--no-verify-jwt` as permission for anonymous business logic
 - do not deploy `portal_r0_hmac_verify_v1` through persistent Dev/Main tooling or let it read any long-lived Portal/generic credential; remote deploy accepts only a live `FUNCTIONS_DEPLOYED` / `ACTIVE_HEALTHY`, nondefault, nonpersistent, no-data Preview branch returned by a read-only `branches list` against the configured Main parent and exactly matching the operator-supplied branch name, Git branch, and optional PR number. It also requires complete `PORTAL_R0_*` configuration, a current-project R0 publishable key, and a `portal:r0:<fixture>:v1` namespace. Local `test` is not a remote deploy target. The function must never call a database, RPC, model, provider, repository, storage, or business kernel
 - do not require an identified R0 branch to remain ready or healthy before cleanup; once Main parent, project ref, nondefault/nonpersistent/no-data flags, branch name, Git branch, optional PR, exact SHA, and cleanup acknowledgement still match, cleanup must attempt the fixed function deletion and surface any real delete failure

@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 2c7aea584b674b46507c2f0e533395db2c312fe6
-lastReviewedNote: 'Edge #496: reviewed latest CLI/formatter target and exact upstream source bindings, real hosted qualification harness and owned cleanup; local checks do not claim hosted execution or global freshness before #495 composition.'
+lastReviewedCommit: 5c9bf5e0878bf38de11aebcffc646afaf9e69cb4
+lastReviewedNote: 'Edges #495/#496: composed the qualified runtime/Zod graph with the source-bound latest CLI/formatter/default-runtime target; hosted gateway/lifecycle qualification and final combined review remain pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -111,7 +111,7 @@ This means branch behavior is part of the repo contract, not just a GitHub UI pr
 
 The authoritative runtime/compiler is Deno `2.1.4` and the actual compiler reported by that runtime is TypeScript `5.6.2`. This matches Supabase CLI `2.121.0` -> Edge Runtime `1.77.4` -> Deno `2.1.4`, with each mapping bound to reviewed upstream source evidence. There is no npm TypeScript or format-plugin compiler sidecar. Exact Node `24.19.0` plus pnpm `11.24.0` remain only because the repository still needs the pinned Supabase CLI, non-mutating Prettier, and Node orchestration/contracts. Enabled function/test roots share one graph-check batch; the runner partitions only after 200 roots. Canonical validation reports its actual inventory and Node/Deno test counts; the credentialed live Upstash test is opt-in and ignored by default.
 
-Edge #379 removes the final identity-provider client, leaving AWS SDK 3.1121.0 only for SageMaker Runtime. OpenAI 7.8.0, Supabase JSR 2.112.4, Upstash Redis 1.38.3, Deno Redis 0.41.2, Zod 4.5.4, and Prettier 3.9.10 remain exact. Edge #361 makes every Functions JS type import use the mapped alias and rejects JSR, npm, HTTPS, and every alternative direct scheme, so local graph checks and Supabase deployment bundles share exact 2.112.4 resolution. Redis packages remain only for Portal. OpenAI Responses and Chat wrapper shapes remain valid on 7.8. Deno Redis 0.41.2 changed `get`/`eval` typing, so the Portal adapter branches explicitly between Upstash and Standard clients without weakening Lua, timeout, or error semantics.
+Edge #379 removes the final identity-provider client, leaving AWS only for SageMaker Runtime. Edge #495 qualifies exact AWS SDK 3.1152.0, OpenAI 7.38.0, Supabase JS/Functions JS 2.118.0 and Deno Redis 0.42.0 plus explicitly reviewed Zod 4.6.7 on the unchanged runtime stack. All direct Supabase consumers match the mapped graph. Edge #361 keeps Functions JS declarations behind the mapped alias and rejects JSR, npm, HTTPS and alternative direct specifiers. Unrelated HTTPS Upstash/Postgres, TIDAS SDK 0.4.1 and developer CLI/Prettier pins remain separate. The unchanged SDK 0.4.1 package resolves its Zod dependency to 4.6.7 too; its Contact consumer is included in qualification. Redis packages remain only for Portal; the existing provider split preserves `get`/`eval`, Lua, timeout and error semantics. Actual installed-library tests cover wire serialization/auth, claims/JWKS, explicit fresh-user lookup and both Redis transports using only synthetic I/O.
 
 The repo intentionally keeps gateway JWT verification off in its standard operator paths:
 

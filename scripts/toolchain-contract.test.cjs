@@ -61,15 +61,15 @@ test('keeps Supabase Edge Runtime-compatible Deno authoritative and auxiliary to
 test('pins the latest reviewed Edge-compatible runtime dependency graph', () => {
   const imports = readJson('supabase/functions/deno.json').imports;
   assert.deepEqual(imports, {
-    '@aws-sdk/client-sagemaker-runtime': 'npm:@aws-sdk/client-sagemaker-runtime@3.1121.0',
-    '@openai/openai': 'npm:openai@7.8.0',
+    '@aws-sdk/client-sagemaker-runtime': 'npm:@aws-sdk/client-sagemaker-runtime@3.1152.0',
+    '@openai/openai': 'npm:openai@7.38.0',
     '@supabase/functions-js/edge-runtime.d.ts':
-      'jsr:@supabase/functions-js@2.112.4/edge-runtime.d.ts',
-    '@supabase/supabase-js@2': 'jsr:@supabase/supabase-js@2.112.4',
+      'jsr:@supabase/functions-js@2.118.0/edge-runtime.d.ts',
+    '@supabase/supabase-js@2': 'jsr:@supabase/supabase-js@2.118.0',
     '@upstash/redis': 'https://esm.sh/@upstash/redis@1.38.3',
     postgres: 'https://deno.land/x/postgresjs@v3.4.8/mod.js',
-    redis: 'jsr:@db/redis@0.41.2',
-    zod: 'npm:/zod@4.5.4',
+    redis: 'jsr:@db/redis@0.42.0',
+    zod: 'npm:/zod@4.6.7',
   });
 
   const directSupabaseVersions = new Set();
@@ -86,19 +86,19 @@ test('pins the latest reviewed Edge-compatible runtime dependency graph', () => 
       }
     }
   }
-  assert.deepEqual([...directSupabaseVersions], ['2.112.4']);
+  assert.deepEqual([...directSupabaseVersions], ['2.118.0']);
   for (const bypass of [
     'jsr:@supabase/functions-js/edge-runtime.d.ts',
-    'jsr:@supabase/functions-js@2.112.4/edge-runtime.d.ts',
-    'npm:@supabase/functions-js@2.112.4',
-    'https://esm.sh/@supabase/functions-js@2.112.4/edge-runtime.d.ts',
+    'jsr:@supabase/functions-js@2.118.0/edge-runtime.d.ts',
+    'npm:@supabase/functions-js@2.118.0',
+    'https://esm.sh/@supabase/functions-js@2.118.0/edge-runtime.d.ts',
   ]) {
     assert.deepEqual([...collectFunctionsJsSpecifiers(`import '${bypass}';`)], [bypass]);
   }
   assert.deepEqual([...directFunctionsJsSpecifiers], ['@supabase/functions-js/edge-runtime.d.ts']);
   assert.match(
     read('supabase/functions/_shared/redis_client.ts'),
-    /@upstash\/redis@1\.38\.3[\s\S]*jsr:@db\/redis@0\.41\.2/u,
+    /@upstash\/redis@1\.38\.3[\s\S]*jsr:@db\/redis@0\.42\.0/u,
   );
   assert.equal(
     fs.existsSync(path.join(repositoryRoot, 'supabase/functions/_shared/decode_api_key.ts')),

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.112.4';
+import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 
 import { authenticateRequest, AuthMethod, type AuthResult } from '../_shared/auth.ts';
 import { supabaseAuthClient, supabaseServiceClient } from '../_shared/supabase_client.ts';

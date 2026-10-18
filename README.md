@@ -24,8 +24,8 @@ checkPaths:
   - supabase/.env.example
   - test.example.http
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 2c7aea584b674b46507c2f0e533395db2c312fe6
-lastReviewedNote: 'Edge #496: reviewed latest CLI/formatter target and exact upstream source bindings, real hosted qualification harness and owned cleanup; local checks do not claim hosted execution or global freshness before #495 composition.'
+lastReviewedCommit: 5c9bf5e0878bf38de11aebcffc646afaf9e69cb4
+lastReviewedNote: 'Edges #495/#496: composed the qualified runtime/Zod graph with the source-bound latest CLI/formatter/default-runtime target; hosted gateway/lifecycle qualification and final combined review remain pending.'
 ---
 
 # TianGong-LCA-Edge-Functions
@@ -69,7 +69,7 @@ These files are the low-token entry path for repo ownership, branch and deploy r
 - Deno 2.1.4; `deno --version` must report bundled TypeScript 5.6.2. `.tool-versions` is the shared local/CI version source.
 - Node.js 24.19.0 and pnpm 11.24.0 for auxiliary Supabase CLI, formatting, and validation wrappers
 - Docker Engine (required if you run local Supabase stack)
-- Supabase CLI 2.121.0, installed through this repository's `supabase` dev dependency; it embeds Edge Runtime 1.77.4, whose tagged source declares Deno 2.1.4; the hosted stack qualification separately records the actual runtime identity
+- Supabase CLI 2.121.0, installed through this repository's `supabase` dev dependency; it embeds Edge Runtime 1.77.4, whose tagged source declares Deno 2.1.4; hosted qualification separately records the actual runtime identity
 
 Initialize/refresh Node dependencies:
 
@@ -466,7 +466,7 @@ Queued and running jobs return public progress. A completed job includes `data.r
 
 - No LangChain dependency in active path.
 - OpenAI SDK mapping is in `supabase/functions/deno.json`:
-  - `@openai/openai -> npm:openai@7.8.0`
+  - `@openai/openai -> npm:openai@7.38.0`
 - Shared wrappers:
   - `supabase/functions/_shared/openai_structured.ts`
   - `supabase/functions/_shared/openai_chat.ts`
@@ -487,7 +487,7 @@ Only `OPENAI_API_KEY` is used from the key file. The runner sends fixed syntheti
 
 Provision `HYBRID_OPENAI_CHAT_MODEL=gpt-6-luna` and `PORTAL_OPENAI_CHAT_MODEL=gpt-6-luna` explicitly in each qualified target. Preserve the generic translation model and isolated Portal credentials. Portal V1 cache identity retains the full signed request; V2 retains query/kind reuse. Both bind model/endpoint/embedding identity, reasoning, actual synonym rules and schema, plus the named task-template revision. Update that revision if the task or user prompt template changes. Changed identities miss; old V2 continuations restart before model/database work. No broad Redis deletion is part of migration.
 
-The reviewed Edge dependency baseline also pins AWS SDK 3.1121.0, Supabase JSR 2.112.4, Upstash Redis 1.38.3, Deno Redis 0.41.2, Zod 4.5.4, and Prettier 3.9.10. Redis dependencies remain only for isolated Portal runtimes. TIDAS package routes enqueue database `worker_jobs`; they do not import the JavaScript TIDAS SDK.
+The reviewed Edge #495 runtime dependency baseline pins AWS SDK 3.1152.0, OpenAI 7.38.0, Supabase JS/Functions JS 2.118.0 and Deno Redis 0.42.0, with the explicitly reviewed Zod 4.6.7 extension, on the unchanged Deno 2.1.4 stack. All direct Supabase consumers match that version and Functions JS declarations retain the mapped alias. Unrelated Upstash Redis 1.38.3, Postgres HTTPS, TIDAS SDK 0.4.1 and developer CLI/Prettier pins remain separate. Zod also resolves beneath the unchanged TIDAS SDK 0.4.1 consumer; this is a validator dependency update, not adoption of SDK 0.6.0. Redis dependencies remain only for isolated Portal runtimes. TIDAS package routes enqueue database `worker_jobs`; they do not import the JavaScript TIDAS SDK.
 
 ## Required Development Workflow
 

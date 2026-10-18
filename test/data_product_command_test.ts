@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertThrows } from 'jsr:@std/assert';
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.112.4';
+import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 
 import type { ActorContext } from '../supabase/functions/_shared/command_runtime/actor_context.ts';
 import { buildCommandAuditPayload } from '../supabase/functions/_shared/command_runtime/audit_log.ts';

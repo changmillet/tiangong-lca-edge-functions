@@ -150,7 +150,7 @@ test('retained parser gaps have explicit owner disposition instead of silent cov
   const imports = JSON.parse(read('supabase/functions/deno.json')).imports;
   const guidance = read('docs/agents/repo-validation.md');
   for (const specifier of [
-    'npm:/zod@4.5.4',
+    'npm:/zod@4.6.7',
     'https://esm.sh/@upstash/redis@1.38.3',
     'https://deno.land/x/postgresjs@v3.4.8/mod.js',
   ]) {
