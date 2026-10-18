@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: ebdc3631976c56db8382fd8602fd5ca2730852bc
-lastReviewedNote: 'Edge #492: reviewed opaque artifact identifiers, trusted digest and snapshot/method identity checks, and regression proof; auth, deployment and runtime dependencies are unchanged.'
+lastReviewedCommit: '84a0b8411c4b4aa9a8a8d682637966c5f86b2a0a'
+lastReviewedNote: 'Edge #492: reviewed opaque artifact identities and preserved integrity checks on the #491 pnpm setup baseline; runtime pins, auth and explicit deployment boundaries remain unchanged.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
