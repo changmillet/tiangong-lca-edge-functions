@@ -1,8 +1,8 @@
 version: 1
 layout: repo
 lastReviewedAt: '2026-10-18'
-lastReviewedCommit: '8bbe26dbd1a15030c7ec0b60c570f2f62ffb365d'
-lastReviewedNote: 'Edges #495/#496: read the complete six-document review-plan set against combined 8bbe26d, corrected composition and observed local-proof descriptions, and bound the hosted workflow to existing governance; hosted gateway/lifecycle execution and independent final review remain pending.'
+lastReviewedCommit: '59489b57c9857f8390fdba2860e020cdd468ba6e'
+lastReviewedNote: 'Edge #496: reviewed the runner-step/GITHUB_ENV path initialization after the hosted workflow rejected runner.temp in job env; existing driver/recovery/artifact identity and both mandatory stack variants are preserved. Actual hosted runtime qualification remains pending.'
 
 # Keep deterministic governance facts here.
 # AGENTS.md stays as the repo contract entrypoint.

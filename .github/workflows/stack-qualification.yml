@@ -31,9 +31,9 @@ jobs:
       fail-fast: false
       matrix:
         variant: [baseline, candidate]
-    env:
-      EDGE_STACK_QUALIFICATION_ROOT: ${{ runner.temp }}/edge496-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.variant }}
     steps:
+      - name: Select isolated qualification root
+        run: echo "EDGE_STACK_QUALIFICATION_ROOT=$RUNNER_TEMP/edge496-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-${{ matrix.variant }}" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}

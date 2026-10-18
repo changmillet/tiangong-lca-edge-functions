@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 8bbe26dbd1a15030c7ec0b60c570f2f62ffb365d
-lastReviewedNote: 'Edges #495/#496: read the complete six-document review-plan set against combined 8bbe26d, corrected composition and observed local-proof descriptions, and bound the hosted workflow to existing governance; hosted gateway/lifecycle execution and independent final review remain pending.'
+lastReviewedCommit: 59489b57c9857f8390fdba2860e020cdd468ba6e
+lastReviewedNote: 'Edge #496: reviewed the runner-step/GITHUB_ENV path initialization after the hosted workflow rejected runner.temp in job env; existing driver/recovery/artifact identity and both mandatory stack variants are preserved. Actual hosted runtime qualification remains pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -278,6 +278,8 @@ All-unit query reader changes must prove opaque task/calculation/method IDs and 
 The selected developer target is Prettier 3.9.10 / Supabase CLI 2.121.0, whose default Edge Runtime is 1.77.4. Its tagged Deno source still declares 2.1.4; standalone compiler checks retain TypeScript 5.6.2. Source fixtures bind exact upstream blobs. These declarations do not claim an executed hosted stack pass.
 
 `Local stack qualification` stages public packages/images on an owned Docker-enabled Linux runner, verifies the installed CLI binary against its official platform tarball and all source blobs, then runs baseline CLI 2.116.0 / Runtime 1.74.3 and candidate CLI 2.121.0 / Runtime 1.77.4 separately. The real CLI starts a disposable local DB/Kong/Edge fixture, selects `functions serve --no-verify-jwt --env-file`, exits serve, and stops with `--no-backup`. No real project link, user environment, provider or business database is used. HOME is preserved and configuration/cache roots are owned.
+
+The workflow initializes its isolated root in a runner step using the quoted `RUNNER_TEMP` value and `GITHUB_ENV`, so the driver, always-run recovery and artifact upload share one path. GitHub does not allow the `runner` context in job-level `env`; validate workflow expression contexts before scheduling the matrix. An invalid workflow with zero jobs is no CLI/runtime execution evidence.
 
 The offline pair uses the actual CLI-produced bootstrap and Functions Kong route, exact pulled image digests, an internal network and random loopback port. Actual repository HMAC/Portal helpers prove prefix/raw/chunked body preservation, key and Authorization/Cookie rejection, narrow legacy anon compatibility, gateway JWT validation and actual worker request/response cancellation. Each variant must pass and produce measured runner/image/config/source bindings plus an empty exact owned-resource cleanup receipt. A separate always-run recovery step handles interrupted qualification; no global prune is permitted. Local driver/fixture tests prove harness mechanics only. Missing hosted execution or cleanup is a remaining acceptance criterion, never an ignored success.
 
