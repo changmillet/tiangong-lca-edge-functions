@@ -6,6 +6,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { terminateOwnedGroup } = require('./process.cjs');
+const { assertLoopbackReleased } = require('./relay.cjs');
 const { requireHostedLinux, assertOwner, ownedEnvironment } = require('./contracts.cjs');
 requireHostedLinux();
 const parent = process.env.EDGE_STACK_QUALIFICATION_ROOT;
@@ -28,9 +29,15 @@ async function cleanupAll() {
     const errors = [];
     let processCleanup;
     let lifecycleCleanup;
+    let relayCleanup;
     try {
       processCleanup = await terminateOwnedGroup(lease);
       lifecycleCleanup = await terminateOwnedGroup({ root, servePid: lease.lifecyclePid });
+    } catch (error) {
+      errors.push(error.message);
+    }
+    try {
+      relayCleanup = await assertLoopbackReleased(lease.relayPorts ?? []);
     } catch (error) {
       errors.push(error.message);
     }
@@ -76,6 +83,7 @@ async function cleanupAll() {
           complete: errors.length === 0,
           processCleanup,
           lifecycleCleanup,
+          relayCleanup,
           errors,
         },
         null,

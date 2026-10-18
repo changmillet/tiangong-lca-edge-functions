@@ -40,8 +40,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 59489b57c9857f8390fdba2860e020cdd468ba6e
-lastReviewedNote: 'Edge #496: rechecked the runner-step root initialization against the previously fully read combined contract; exact toolchain, auth/deploy boundaries, mandatory hosted matrix and owned cleanup are unchanged. Hosted runtime qualification remains pending.'
+lastReviewedCommit: 92033b7d2a54dc143c8eade6e5c49e06f0d258e1
+lastReviewedNote: 'Edge #496: reviewed the source-backed internal-network publishing failure, exact owned endpoint TCP relays, byte/half-close/backpressure/abort tests, bounded DB startup capture and listener cleanup. All networks remain internal; native CLI and both hosted functional variants remain mandatory and pending.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
@@ -96,7 +96,7 @@ Keep these entry-level facts in `AGENTS.md`. Use `README.md` and `docs/agents/re
 - auxiliary package manager/runtime: pnpm `11.24.0` on Node `24.19.0`, retained for the exact Supabase CLI, Prettier, and Node validation wrappers only
 - latest reviewed import graph: AWS SDK `3.1152.0`, OpenAI `7.38.0`, Supabase JSR `2.118.0`, Upstash Redis `1.38.3`, Deno Redis `0.42.0`, Zod `4.6.7`, and Prettier `3.9.10`; every Functions JS type import must use the mapped `@supabase/functions-js/edge-runtime.d.ts` alias, while any direct JSR, npm, HTTPS, or other `@supabase/functions-js` specifier is forbidden; `pnpm outdated` and exact-Deno `deno outdated --latest` must remain empty
 - local serve command: `pnpm start`
-- required stack qualification: `pnpm qualify:stack` runs only on an owned Docker-enabled hosted Linux runner; source fixtures and local checks do not establish a hosted stack pass
+- required stack qualification: `pnpm qualify:stack` runs only on an owned Docker-enabled hosted Linux runner; source fixtures and local checks do not establish a hosted stack pass; every fixture network stays internal, and exact owned endpoint relays provide loopback-only host access with verified listener/resource cleanup
 - baseline local validation: non-mutating `pnpm lint` and canonical `pnpm check`
 - dependency-input PRs to `dev` and `main` reuse the secretless `CI` workflow; monitoring scope, security routing and remaining URL/toolchain pins are recorded in `docs/agents/repo-validation.md`
 - `pnpm check` validates exact runtime versions, checks all enabled function/test roots through one bounded shared Deno graph, runs the Node contract tests, and executes the default Deno behavior tests plus one opt-in live Upstash test that remains ignored without explicit credentials

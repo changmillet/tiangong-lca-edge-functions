@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 59489b57c9857f8390fdba2860e020cdd468ba6e
-lastReviewedNote: 'Edge #496: rechecked the runner-step root initialization against the previously fully read combined contract; exact toolchain, auth/deploy boundaries, mandatory hosted matrix and owned cleanup are unchanged. Hosted runtime qualification remains pending.'
+lastReviewedCommit: 92033b7d2a54dc143c8eade6e5c49e06f0d258e1
+lastReviewedNote: 'Edge #496: reviewed the source-backed internal-network publishing failure, exact owned endpoint TCP relays, byte/half-close/backpressure/abort tests, bounded DB startup capture and listener cleanup. All networks remain internal; native CLI and both hosted functional variants remain mandatory and pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -112,6 +112,8 @@ This means branch behavior is part of the repo contract, not just a GitHub UI pr
 The authoritative runtime/compiler is Deno `2.1.4` and the actual compiler reported by that runtime is TypeScript `5.6.2`. This matches Supabase CLI `2.121.0` -> Edge Runtime `1.77.4` -> Deno `2.1.4`, with each mapping bound to reviewed upstream source evidence. There is no npm TypeScript or format-plugin compiler sidecar. Exact Node `24.19.0` plus pnpm `11.24.0` remain only because the repository still needs the pinned Supabase CLI, non-mutating Prettier, and Node orchestration/contracts. Enabled function/test roots share one graph-check batch; the runner partitions only after 200 roots. Canonical validation reports its actual inventory and Node/Deno test counts; the credentialed live Upstash test is opt-in and ignored by default.
 
 Edge #379 removes the final identity-provider client, leaving AWS only for SageMaker Runtime. Edge #495 qualifies exact AWS SDK 3.1152.0, OpenAI 7.38.0, Supabase JS/Functions JS 2.118.0 and Deno Redis 0.42.0 plus explicitly reviewed Zod 4.6.7 on the unchanged runtime stack. All direct Supabase consumers match the mapped graph. Edge #361 keeps Functions JS declarations behind the mapped alias and rejects JSR, npm, HTTPS and alternative direct specifiers. HTTPS Upstash/Postgres and TIDAS SDK 0.4.1 remain unchanged. The separately owned #496 CLI 2.121.0 / default Edge Runtime 1.77.4 and Prettier 3.9.10 scope is normally composed with #495 in this candidate; combined local gates and both latest inventories passed, while hosted stack qualification remains pending. The unchanged SDK 0.4.1 package resolves its Zod dependency to 4.6.7 too; its Contact consumer is included in qualification. Redis packages remain only for Portal; the existing provider split preserves `get`/`eval`, Lua, timeout and error semantics. Actual installed-library tests cover wire serialization/auth, claims/JWKS, explicit fresh-user lookup and both Redis transports using only synthetic I/O.
+
+The hosted local-stack harness keeps both the CLI prerequisite stack and standalone Kong/Edge slice on exclusively internal Docker networks. Owned host-loopback TCP relays provide the CLI/client access that internal Docker bridges do not publish, binding every connection to an inspected UUID label, fixed container ID and sole network/IP. They carry opaque bytes and preserve half-close/backpressure/abort; listener closure joins the existing strict resource cleanup proof. This is synthetic harness transport, not a product auth or deployment change.
 
 The repo intentionally keeps gateway JWT verification off in its standard operator paths:
 

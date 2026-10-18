@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-18
-lastReviewedCommit: 59489b57c9857f8390fdba2860e020cdd468ba6e
-lastReviewedNote: 'Edge #496: reviewed the runner-step/GITHUB_ENV path initialization after the hosted workflow rejected runner.temp in job env; existing driver/recovery/artifact identity and both mandatory stack variants are preserved. Actual hosted runtime qualification remains pending.'
+lastReviewedCommit: 92033b7d2a54dc143c8eade6e5c49e06f0d258e1
+lastReviewedNote: 'Edge #496: reviewed the source-backed internal-network publishing failure, exact owned endpoint TCP relays, byte/half-close/backpressure/abort tests, bounded DB startup capture and listener cleanup. All networks remain internal; native CLI and both hosted functional variants remain mandatory and pending.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -280,6 +280,8 @@ The selected developer target is Prettier 3.9.10 / Supabase CLI 2.121.0, whose d
 `Local stack qualification` stages public packages/images on an owned Docker-enabled Linux runner, verifies the installed CLI binary against its official platform tarball and all source blobs, then runs baseline CLI 2.116.0 / Runtime 1.74.3 and candidate CLI 2.121.0 / Runtime 1.77.4 separately. The real CLI starts a disposable local DB/Kong/Edge fixture, selects `functions serve --no-verify-jwt --env-file`, exits serve, and stops with `--no-backup`. No real project link, user environment, provider or business database is used. HOME is preserved and configuration/cache roots are owned.
 
 The workflow initializes its isolated root in a runner step using the quoted `RUNNER_TEMP` value and `GITHUB_ENV`, so the driver, always-run recovery and artifact upload share one path. GitHub does not allow the `runner` context in job-level `env`; validate workflow expression contexts before scheduling the matrix. An invalid workflow with zero jobs is no CLI/runtime execution evidence.
+
+Docker 28 internal bridges do not publish host ports. All fixture networks remain internal, and host CLI/client traffic uses loopback-only opaque TCP relays to the exact UUID-labelled container ID and sole internal network/IP. The relay binds its first verified endpoint and rejects replacement, preserves bytes/backpressure/half-close/abort, has bounded idle/lifetime limits, and records counters plus closed listeners. Internal and independent recovery both verify port release. Startup captures bounded owned DB state/port mappings and sanitized logs before CLI failure can remove the container. Native CLI start/serve/stop and all gateway/cancellation assertions remain required; a relay does not replace those proofs.
 
 The offline pair uses the actual CLI-produced bootstrap and Functions Kong route, exact pulled image digests, an internal network and random loopback port. Actual repository HMAC/Portal helpers prove prefix/raw/chunked body preservation, key and Authorization/Cookie rejection, narrow legacy anon compatibility, gateway JWT validation and actual worker request/response cancellation. Each variant must pass and produce measured runner/image/config/source bindings plus an empty exact owned-resource cleanup receipt. A separate always-run recovery step handles interrupted qualification; no global prune is permitted. Local driver/fixture tests prove harness mechanics only. Missing hosted execution or cleanup is a remaining acceptance criterion, never an ignored success.
 

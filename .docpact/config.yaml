@@ -1,8 +1,8 @@
 version: 1
 layout: repo
 lastReviewedAt: '2026-10-18'
-lastReviewedCommit: '59489b57c9857f8390fdba2860e020cdd468ba6e'
-lastReviewedNote: 'Edge #496: reviewed the runner-step/GITHUB_ENV path initialization after the hosted workflow rejected runner.temp in job env; existing driver/recovery/artifact identity and both mandatory stack variants are preserved. Actual hosted runtime qualification remains pending.'
+lastReviewedCommit: '92033b7d2a54dc143c8eade6e5c49e06f0d258e1'
+lastReviewedNote: 'Edge #496: reviewed the source-backed internal-network publishing failure, exact owned endpoint TCP relays, byte/half-close/backpressure/abort tests, bounded DB startup capture and listener cleanup. All networks remain internal; native CLI and both hosted functional variants remain mandatory and pending.'
 
 # Keep deterministic governance facts here.
 # AGENTS.md stays as the repo contract entrypoint.

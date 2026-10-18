@@ -8,6 +8,11 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { execFileSync, spawn, spawnSync } = require('node:child_process');
 const { terminateOwnedGroup } = require('./stack-qualification/process.cjs');
+const {
+  ownedRelayTarget,
+  createOwnedRelay,
+  assertLoopbackReleased,
+} = require('./stack-qualification/relay.cjs');
 const { createRequire } = require('node:module');
 const {
   assertOwner,
@@ -61,12 +66,20 @@ async function main() {
   };
   let serve;
   let lifecycle;
+  const relays = [];
   let dockerReady = false;
   const persist = () =>
     fs.writeFileSync(
       path.join(root, 'lease.json'),
       JSON.stringify(
-        { owner, project, root, servePid: serve?.pid, lifecyclePid: lifecycle?.pid },
+        {
+          owner,
+          project,
+          root,
+          servePid: serve?.pid,
+          lifecyclePid: lifecycle?.pid,
+          relayPorts: relays.map((relay) => relay.snapshot().port),
+        },
         null,
         2,
       ) + '\n',
@@ -89,10 +102,14 @@ async function main() {
     exp: now + 3600,
   });
   const redact = (value) =>
-    [synthetic.secret, synthetic.publishable, synthetic.service, anon, serviceRole].reduce(
-      (s, key) => s.replaceAll(key, `[synthetic:${hash(key).slice(0, 12)}]`),
-      value,
-    );
+    [
+      synthetic.secret,
+      synthetic.publishable,
+      synthetic.service,
+      anon,
+      serviceRole,
+      ...['d', 'p', 'q', 'dp', 'dq', 'qi'].map((key) => asymmetric.signingKey[key]).filter(Boolean),
+    ].reduce((s, key) => s.replaceAll(key, `[synthetic:${hash(key).slice(0, 12)}]`), value);
   function run(command, args, options = {}) {
     const index = ledger.commands.length;
     const started = Date.now();
@@ -141,6 +158,42 @@ async function main() {
     }
   }
   const docker = (args, options) => run('docker', args, options);
+  // Async lifecycle commands reserve their command-log index. Diagnostic and
+  // relay inspections use separate receipts rather than mutating that ledger.
+  const inspect = (kind, name) =>
+    JSON.parse(
+      execFileSync('docker', [kind, 'inspect', name], {
+        env,
+        encoding: 'utf8',
+        timeout: 5000,
+        maxBuffer: 1024 * 1024,
+      }),
+    )[0];
+  async function relayTo(name, networkName, kind, containerPort, hostPort = 0) {
+    const relay = await createOwnedRelay({
+      port: hostPort,
+      resolveTarget: () => {
+        const container = inspect('container', name);
+        const target = ownedRelayTarget(container, inspect('network', networkName), {
+          name,
+          owner,
+          project,
+          kind,
+          port: containerPort,
+        });
+        write(`relay-${name}-target.json`, {
+          target,
+          image: container.Image,
+          requestedPortBindings: container.HostConfig.PortBindings,
+          actualPortBindings: container.NetworkSettings.Ports,
+        });
+        return target;
+      },
+    });
+    relays.push(relay);
+    persist();
+    return relay;
+  }
   const ids = (kind) =>
     docker([
       kind,
@@ -167,6 +220,24 @@ async function main() {
     try {
       ledger.processCleanup = await terminateOwnedGroup({ root, servePid: serve?.pid });
       ledger.lifecycleCleanup = await terminateOwnedGroup({ root, servePid: lifecycle?.pid });
+    } catch (error) {
+      errors.push(error.message);
+    }
+    for (const relay of relays) {
+      try {
+        await relay.close();
+      } catch (error) {
+        errors.push(error.message);
+      }
+    }
+    try {
+      ledger.relayCleanup = await assertLoopbackReleased(
+        relays.map((relay) => relay.snapshot().port),
+      );
+      write(
+        'relays.json',
+        relays.map((relay) => relay.snapshot()),
+      );
     } catch (error) {
       errors.push(error.message);
     }
@@ -462,7 +533,68 @@ async function main() {
     const network = `${owner}-cli`;
     docker(['network', 'create', '--internal', '--label', `edge496.owner=${owner}`, network]);
     ledger.networks.push(network);
-    await cli(['start', '--exclude', excludes, '--network-id', network]);
+    // Internal bridges intentionally suppress Docker host publishing. These
+    // host-only byte relays do not add a container route or permit any egress.
+    const dbName = `supabase_db_${project}`;
+    const dbRelay = await relayTo(dbName, network, 'cli', 5432, dbPort);
+    const apiRelay = await relayTo(`supabase_kong_${project}`, network, 'cli', 8000, apiPort);
+    let startupSequence = 0;
+    let startupFailure;
+    function captureDatabaseStartup() {
+      if (startupSequence >= 256) return;
+      const sequence = startupSequence++;
+      const result = spawnSync('docker', ['container', 'inspect', dbName], {
+        env,
+        encoding: 'utf8',
+        timeout: 5000,
+        maxBuffer: 1024 * 1024,
+      });
+      if (result.status !== 0) {
+        write(`startup-db-${sequence}.json`, {
+          observedAt: new Date().toISOString(),
+          present: false,
+          inspectExit: result.status,
+        });
+        return;
+      }
+      try {
+        const info = JSON.parse(result.stdout)[0];
+        assert.equal(info.Config.Labels['com.supabase.cli.project'], project);
+        assert.equal(info.Name, '/' + dbName);
+        write(`startup-db-${sequence}.json`, {
+          observedAt: new Date().toISOString(),
+          present: true,
+          id: info.Id,
+          name: info.Name,
+          image: info.Image,
+          state: info.State,
+          requestedPortBindings: info.HostConfig.PortBindings,
+          actualPortBindings: info.NetworkSettings.Ports,
+          networks: info.NetworkSettings.Networks,
+        });
+        const logs = spawnSync('docker', ['logs', '--tail', '100', info.Id], {
+          env,
+          encoding: 'utf8',
+          timeout: 5000,
+          maxBuffer: 256 * 1024,
+        });
+        fs.writeFileSync(
+          path.join(evidence, `startup-db-${sequence}.log`),
+          redact(`${logs.stdout ?? ''}\n${logs.stderr ?? ''}`),
+        );
+      } catch (error) {
+        startupFailure = error;
+        write(`startup-db-${sequence}-failure.json`, { message: error.message });
+      }
+    }
+    const startupTimer = setInterval(captureDatabaseStartup, 1000);
+    try {
+      await cli(['start', '--debug', '--exclude', excludes, '--network-id', network]);
+    } finally {
+      clearInterval(startupTimer);
+      captureDatabaseStartup();
+    }
+    assert.equal(startupFailure, undefined, 'Owned startup capture identity failed');
     const runtimeName = `supabase_edge_runtime_${project}`;
     const kongName = `supabase_kong_${project}`;
     const runtime = JSON.parse(docker(['container', 'inspect', runtimeName]))[0];
@@ -564,6 +696,8 @@ async function main() {
     assert.ok(serve.exitCode !== null || serve.signalCode !== null);
     write('serve-exit.json', { code: serve.exitCode, signal: serve.signalCode });
     await cli(['stop', '--no-backup']);
+    await dbRelay.close();
+    await apiRelay.close();
     // Real offline two-container slice reuses the exact CLI-produced bootstrap/config, without DB.
     const pairNetwork = `${owner}-pair`;
     docker(['network', 'create', '--internal', '--label', `edge496.owner=${owner}`, pairNetwork]);
@@ -631,8 +765,6 @@ async function main() {
       'kong',
       '--memory',
       '384m',
-      '-p',
-      '127.0.0.1::8000',
       '-e',
       'KONG_DATABASE=off',
       '-e',
@@ -648,8 +780,8 @@ async function main() {
       'docker-start',
     ]);
     ledger.created.push({ name: pairKong });
-    const port = docker(['port', pairKong, '8000/tcp']).trim();
-    assert.match(port, /^127\.0\.0\.1:\d+$/u);
+    const pairRelay = await relayTo(pairKong, pairNetwork, 'pair', 8000);
+    const port = `127.0.0.1:${pairRelay.snapshot().port}`;
     const pairUrl = `http://${port}/functions/v1/portal`;
     await ready(pairUrl);
     await portalCases(pairUrl, 'offline-pair', true);
@@ -795,6 +927,14 @@ async function main() {
       ledger.cleanupFailure = error.message;
       throw error;
     } finally {
+      const rawServeLog = path.join(evidence, 'serve.raw.log');
+      if (fs.existsSync(rawServeLog)) {
+        fs.writeFileSync(
+          path.join(evidence, 'serve.log'),
+          redact(fs.readFileSync(rawServeLog, 'utf8')),
+        );
+        fs.rmSync(rawServeLog);
+      }
       write('receipt.json', ledger);
       fs.writeFileSync(path.join(parent, `${variant}-latest.txt`), evidence + '\n');
     }
