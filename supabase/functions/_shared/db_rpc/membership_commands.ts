@@ -1,4 +1,4 @@
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.112.4';
+import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 
 import type { CommandAuditPayload } from '../command_runtime/audit_log.ts';
 import type {

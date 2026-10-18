@@ -1,3 +1,11 @@
+# Edges #495/#496 combined review at 8bbe26dbd1a15030c7ec0b60c570f2f62ffb365d:
+# all existing payloads and actor/service/public credential boundaries remain unchanged.
+# CLI/default-runtime qualification adds only synthetic hosted fixtures; this collection
+# was read in full, with no endpoint invoked. Docpact cannot mark raw HTTP metadata.
+# Edge #495 Zod 4.6.7 review: bounded command/Contact acceptance and diagnostics
+# remain qualified; this collection adds no live request or SDK package migration.
+# Edge #495 runtime SDK review: existing request payloads, JWT/API-key boundaries
+# and response examples are unchanged; synthetic wire proof does not invoke these endpoints.
 # Edge #357 dependency review: the latest runtime import graph changes no endpoint,
 # authentication header, request payload, or response example in this collection.
 # Edge #361 pin review: the Functions JS type-only alias normalization changes no

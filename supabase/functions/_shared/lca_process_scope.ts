@@ -1,4 +1,4 @@
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.112.4';
+import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 
 import {
   OWNER_DRAFT_PROCESS_STATE,

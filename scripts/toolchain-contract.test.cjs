@@ -33,6 +33,7 @@ const workflowSources = fs
   .map((fileName) => ({ fileName, source: read(`.github/workflows/${fileName}`) }));
 
 const expectedActions = new Map([
+  ['actions/upload-artifact', 'cf430e030ddbb5b0abf93d22962f4752f3646cd9'],
   ['actions/checkout', '3d3c42e5aac5ba805825da76410c181273ba90b1'],
   ['denoland/setup-deno', '22d081ff2d3a40755e97629de92e3bcbfa7cf2ed'],
   ['dtolnay/rust-toolchain', '4360b52568e2003a75bf9bc1d59f33a8e3fc893c'],
@@ -46,10 +47,10 @@ test('keeps Supabase Edge Runtime-compatible Deno authoritative and auxiliary to
   assert.deepEqual(packageJson.engines, { node: '24.19.0', pnpm: '11.24.0' });
   assert.equal(packageJson.config.denoVersion, '2.1.4');
   assert.equal(packageJson.config.denoTypeScriptVersion, '5.6.2');
-  assert.equal(packageJson.config.supabaseCliVersion, '2.116.0');
-  assert.equal(packageJson.config.supabaseEdgeRuntimeVersion, '1.74.3');
-  assert.equal(packageJson.devDependencies.prettier, '3.9.6');
-  assert.equal(packageJson.devDependencies.supabase, '2.116.0');
+  assert.equal(packageJson.config.supabaseCliVersion, '2.121.0');
+  assert.equal(packageJson.config.supabaseEdgeRuntimeVersion, '1.77.4');
+  assert.equal(packageJson.devDependencies.prettier, '3.9.10');
+  assert.equal(packageJson.devDependencies.supabase, '2.121.0');
   assert.equal(packageJson.devDependencies.typescript, undefined);
   assert.equal(packageJson.devDependencies['prettier-plugin-organize-imports'], undefined);
   assert.equal(read('.nvmrc').trim(), '24.19.0');
@@ -60,15 +61,15 @@ test('keeps Supabase Edge Runtime-compatible Deno authoritative and auxiliary to
 test('pins the latest reviewed Edge-compatible runtime dependency graph', () => {
   const imports = readJson('supabase/functions/deno.json').imports;
   assert.deepEqual(imports, {
-    '@aws-sdk/client-sagemaker-runtime': 'npm:@aws-sdk/client-sagemaker-runtime@3.1121.0',
-    '@openai/openai': 'npm:openai@7.8.0',
+    '@aws-sdk/client-sagemaker-runtime': 'npm:@aws-sdk/client-sagemaker-runtime@3.1152.0',
+    '@openai/openai': 'npm:openai@7.38.0',
     '@supabase/functions-js/edge-runtime.d.ts':
-      'jsr:@supabase/functions-js@2.112.4/edge-runtime.d.ts',
-    '@supabase/supabase-js@2': 'jsr:@supabase/supabase-js@2.112.4',
+      'jsr:@supabase/functions-js@2.118.0/edge-runtime.d.ts',
+    '@supabase/supabase-js@2': 'jsr:@supabase/supabase-js@2.118.0',
     '@upstash/redis': 'https://esm.sh/@upstash/redis@1.38.3',
     postgres: 'https://deno.land/x/postgresjs@v3.4.8/mod.js',
-    redis: 'jsr:@db/redis@0.41.2',
-    zod: 'npm:/zod@4.5.4',
+    redis: 'jsr:@db/redis@0.42.0',
+    zod: 'npm:/zod@4.6.7',
   });
 
   const directSupabaseVersions = new Set();
@@ -85,19 +86,19 @@ test('pins the latest reviewed Edge-compatible runtime dependency graph', () => 
       }
     }
   }
-  assert.deepEqual([...directSupabaseVersions], ['2.112.4']);
+  assert.deepEqual([...directSupabaseVersions], ['2.118.0']);
   for (const bypass of [
     'jsr:@supabase/functions-js/edge-runtime.d.ts',
-    'jsr:@supabase/functions-js@2.112.4/edge-runtime.d.ts',
-    'npm:@supabase/functions-js@2.112.4',
-    'https://esm.sh/@supabase/functions-js@2.112.4/edge-runtime.d.ts',
+    'jsr:@supabase/functions-js@2.118.0/edge-runtime.d.ts',
+    'npm:@supabase/functions-js@2.118.0',
+    'https://esm.sh/@supabase/functions-js@2.118.0/edge-runtime.d.ts',
   ]) {
     assert.deepEqual([...collectFunctionsJsSpecifiers(`import '${bypass}';`)], [bypass]);
   }
   assert.deepEqual([...directFunctionsJsSpecifiers], ['@supabase/functions-js/edge-runtime.d.ts']);
   assert.match(
     read('supabase/functions/_shared/redis_client.ts'),
-    /@upstash\/redis@1\.38\.3[\s\S]*jsr:@db\/redis@0\.41\.2/u,
+    /@upstash\/redis@1\.38\.3[\s\S]*jsr:@db\/redis@0\.42\.0/u,
   );
   assert.equal(
     fs.existsSync(path.join(repositoryRoot, 'supabase/functions/_shared/decode_api_key.ts')),
@@ -107,7 +108,7 @@ test('pins the latest reviewed Edge-compatible runtime dependency graph', () => 
 
 test('binds the Supabase CLI image to reviewed Edge Runtime and Deno source evidence', () => {
   const packageJson = readJson('package.json');
-  const fixture = readJson('test/fixtures/supabase-edge-runtime-v1.74.3-deno.json');
+  const fixture = readJson('test/fixtures/supabase-edge-runtime-v1.77.4-deno.json');
 
   assert.equal(fixture.schemaVersion, 'supabase.edge-runtime-deno-source.v1');
   assert.equal(fixture.cli.version, packageJson.config.supabaseCliVersion);
@@ -128,15 +129,15 @@ test('binds the Supabase CLI image to reviewed Edge Runtime and Deno source evid
     [
       {
         repository: 'supabase/cli',
-        ref: 'v2.116.0',
-        path: 'apps/cli-go/pkg/config/templates/Dockerfile',
-        gitBlobSha: 'f24a2d104363a974b44c0c6b711e12bd19b62376',
+        ref: 'v2.121.0',
+        path: 'apps/cli/src/shared/services/Dockerfile',
+        gitBlobSha: '563c96ccd7ce0a7d1f4052750b391a1a46ca3836',
       },
       {
         repository: 'supabase/edge-runtime',
-        ref: 'v1.74.3',
+        ref: 'v1.77.4',
         path: 'deno/Cargo.toml',
-        gitBlobSha: 'a71e701672fc20c82d9d08f71f8bf157a9dbdd3b',
+        gitBlobSha: '7d9ff170f4a4ce3d82096705f9a97ee86984fb6b',
       },
       {
         repository: 'denoland/deno',
@@ -152,8 +153,8 @@ test('uses one frozen pnpm graph without npm-owned compiler tooling', () => {
   const lockfile = read('pnpm-lock.yaml');
   const workspace = read('pnpm-workspace.yaml');
 
-  assert.match(lockfile, /^\s{2}prettier@3\.9\.6:/mu);
-  assert.match(lockfile, /^\s{2}supabase@2\.116\.0:/mu);
+  assert.match(lockfile, /^\s{2}prettier@3\.9\.10:/mu);
+  assert.match(lockfile, /^\s{2}supabase@2\.121\.0:/mu);
   assert.doesNotMatch(lockfile, /^\s{2}typescript@/mu);
   assert.doesNotMatch(lockfile, /prettier-plugin-organize-imports/u);
   assert.match(workspace, /supabase:\s*true/u);
@@ -244,4 +245,120 @@ test('binds CI to exact Deno and auxiliary Node runtimes', () => {
   assert.match(ci, /run:\s*pnpm install --frozen-lockfile/u);
   assert.match(ci, /run:\s*pnpm check/u);
   assert.match(supabaseConfig, /\[edge_runtime\][\s\S]*?deno_version\s*=\s*2/u);
+});
+
+test('both runtime fixtures bind the native image reader and separate binary version producers', () => {
+  for (const [release, readerBlob, dockerfileBlob] of [
+    [
+      '1.74.3',
+      'd9982ddf9f27524a5c1ded67adc7d875a004bb47',
+      '8044ba168b46f28a03d846304cb490d956e384c4',
+    ],
+    [
+      '1.77.4',
+      '377f78a0344c2c004e24621f8f86f7f6e4084576',
+      'ff1c4d68f27e76b09263e45a0cc4496fbf71a034',
+    ],
+  ]) {
+    const fixture = readJson(`test/fixtures/supabase-edge-runtime-v${release}-deno.json`);
+    assert.equal(fixture.cli.edgeRuntimeVersion, release);
+    assert.equal(fixture.edgeRuntime.version, release);
+    assert.equal(fixture.cli.source.repository, 'supabase/cli');
+    assert.equal(fixture.cli.source.ref, `v${fixture.cli.version}`);
+    assert.equal(
+      fixture.cli.source.path,
+      release === '1.74.3'
+        ? 'apps/cli-go/pkg/config/templates/Dockerfile'
+        : 'apps/cli/src/shared/services/Dockerfile',
+    );
+    assert.equal(
+      fixture.cli.source.gitBlobSha,
+      release === '1.74.3'
+        ? 'f24a2d104363a974b44c0c6b711e12bd19b62376'
+        : '563c96ccd7ce0a7d1f4052750b391a1a46ca3836',
+    );
+    assert.equal(fixture.cli.readerSource.repository, 'supabase/cli');
+    assert.equal(fixture.cli.readerSource.ref, `v${fixture.cli.version}`);
+    assert.equal(
+      fixture.cli.readerSource.path,
+      'apps/cli/src/shared/services/dockerfile-images.ts',
+    );
+    assert.equal(fixture.cli.readerSource.gitBlobSha, readerBlob);
+    assert.equal(fixture.edgeRuntime.binary.version, '0.1.0');
+    assert.equal(fixture.edgeRuntime.binary.profile, 'release');
+    assert.equal(fixture.edgeRuntime.binary.target, 'x86_64-unknown-linux-gnu');
+    assert.deepEqual(
+      fixture.edgeRuntime.binary.sources.map(
+        ({ repository, ref, path: sourcePath, gitBlobSha }) => ({
+          repository,
+          ref,
+          path: sourcePath,
+          gitBlobSha,
+        }),
+      ),
+      [
+        {
+          repository: 'supabase/edge-runtime',
+          ref: `v${release}`,
+          path: 'cli/Cargo.toml',
+          gitBlobSha: '73f582905c73d58481f0fec2311b4f8d1a0a544e',
+        },
+        {
+          repository: 'supabase/edge-runtime',
+          ref: `v${release}`,
+          path: 'cli/src/flags.rs',
+          gitBlobSha: '136b3e0a9793cea7fd0c463978446ad886ddbf9b',
+        },
+        {
+          repository: 'supabase/edge-runtime',
+          ref: `v${release}`,
+          path: 'Dockerfile',
+          gitBlobSha: dockerfileBlob,
+        },
+      ],
+    );
+  }
+});
+
+test('worker metadata has its own exact tagged producer and cannot redefine compiler versions', () => {
+  const expectedSources = {
+    '1.74.3': [
+      'bc7b789a66667e3105f0ca5e0a020a6825ebe476',
+      '3216531f9b8821fe6bb1ea1906d4e524f71393a8',
+      '3798fef25ef6f2824520322bf089f70f72617a4d',
+    ],
+    '1.77.4': [
+      '1a98593cee8882faa9206b8a274496b5e8166935',
+      '0cf2d01e45c5c0e8d33ca741dd07dde73b20a873',
+      'eb2014ed445e81118fc5cf4083e77fd228fc4e45',
+    ],
+  };
+  for (const release of ['1.74.3', '1.77.4']) {
+    const fixture = readJson(`test/fixtures/supabase-edge-runtime-v${release}-deno.json`);
+    assert.deepEqual(fixture.edgeRuntime.worker.reportedVersion, {
+      deno: `supabase-edge-runtime-${release} (compatible with Deno v2.1.4)`,
+      v8: '11.6.189.12',
+      typescript: '5.1.6',
+    });
+    assert.deepEqual(
+      fixture.edgeRuntime.worker.sources.map(
+        ({ repository, ref, path: sourcePath, gitBlobSha }) => ({
+          repository,
+          ref,
+          path: sourcePath,
+          gitBlobSha,
+        }),
+      ),
+      ['ext/runtime/js/bootstrap.js', 'crates/base/src/runtime/mod.rs', 'deno/versions.rs'].map(
+        (sourcePath, index) => ({
+          repository: 'supabase/edge-runtime',
+          ref: `v${release}`,
+          path: sourcePath,
+          gitBlobSha: expectedSources[release][index],
+        }),
+      ),
+    );
+    assert.equal(fixture.deno.version, '2.1.4');
+    assert.equal(fixture.deno.bundledTypeScriptVersion, '5.6.2');
+  }
 });
