@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-16
-lastReviewedCommit: fc82dfe3e4000ebc3df822830e1303ef03bff575
-lastReviewedNote: 'Reviewed for Edge #482: dependency-input CI reuses the canonical secretless gate; discovery, security, exact runtime qualification and deployment remain separate.'
+lastReviewedAt: 2026-10-18
+lastReviewedCommit: 523a279996ec9398b947da6cbcb1caa96491c6e1
+lastReviewedNote: 'Reviewed Edge #491 at 523a279: official tagged pnpm setup source preserves the exact runtime inputs and separate frozen install. Full local canonical proof passes; actual hosted Action execution and cleanup remain separate.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -83,6 +83,8 @@ The Deno entry selects `/supabase/functions`, whose `deno.json` owns the imports
 Keep exact Deno/TypeScript, Node/pnpm, Supabase CLI/runtime, Functions JS and other reviewed dependency contracts. New version proposals must pass existing pin and behavior tests; an intentional supported upgrade updates its owning contract and proof together. Actions monitoring does not update `with.version` scalar toolchain pins or raw runtime selectors; those remain explicitly reviewed tooling maintenance. GitHub currently documents pnpm through version 10, so a successful hosted npm updater and frozen pnpm 11 candidate install must establish actual lockfile compatibility rather than assuming it from configuration parsing.
 
 Configuration activates only after it reaches default `main`; a merged `dev` PR does not activate discovery or establish root-main eligibility. Security proposals still target default `main` and use the controlled main-hotfix/backmerge route. The `target-branch: dev` options apply to version updates, so their groups, cooldowns and fixture exclusions do not configure default-main security behavior. Version exclusions use repository-relative paths without a leading slash. Verify repository alert/security-update settings separately; this file does not enable them or establish successful hosted scans. Discovery may proceed independently of adoption, but bot association/adoption remains blocked wherever the independent merge service's running author protection has not been verified. Never enable merging as a prerequisite for discovery.
+
+The reviewed pnpm setup Action is v3.1.1 at exact commit `a0881977cd8ea73b1ed212236c99ca10dcc80cf4`. Its [tagged Action contract](https://github.com/pnpm/setup/blob/a0881977cd8ea73b1ed212236c99ca10dcc80cf4/action.yml) runs under Node 24 and supports the existing exact pnpm `version`, explicit `runtime`, `cache: true` and `install: false` inputs. The [tagged implementation](https://github.com/pnpm/setup/blob/a0881977cd8ea73b1ed212236c99ca10dcc80cf4/src/index.ts) honors the disabled automatic install, so the separate frozen installation remains the graph gate. Its runtime selector preserves auxiliary Node 24.19.0; it does not select or upgrade the authoritative Deno/TypeScript runtime. Keep the exact-action assertion and all canonical checks when qualifying a later proposal. Local source checks do not prove hosted Action execution or cache cleanup; retain the actual candidate CI logs separately.
 
 Validation includes `node --test scripts/dependency-ci-contract.test.cjs`, frozen install, `pnpm lint`, `pnpm check`, and strict Docpact validation/lint. Preserve actual updater and candidate CI receipts before claiming hosted coverage. Source delivery, promotion, root integration and any later Function deployment remain separate outcomes.
 

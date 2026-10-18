@@ -39,9 +39,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-16
-lastReviewedCommit: fc82dfe3e4000ebc3df822830e1303ef03bff575
-lastReviewedNote: 'Reviewed for Edge #482: scoped secretless dependency PR validation reuses lint/check, and monitoring preserves exact runtime pins, M2 promotion and deployment boundaries.'
+lastReviewedAt: 2026-10-18
+lastReviewedCommit: 523a279996ec9398b947da6cbcb1caa96491c6e1
+lastReviewedNote: 'Reviewed Edge #491 at 523a279: pnpm setup v3.1.1 qualifies the existing CI inputs without changing exact Deno/TypeScript, auxiliary tooling, runtime imports, permissions, M2 delivery or deployment authority.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
