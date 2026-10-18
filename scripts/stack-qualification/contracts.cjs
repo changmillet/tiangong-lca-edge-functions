@@ -65,6 +65,24 @@ function jwt(secret, payload) {
   const wire = `${header}.${body}`;
   return `${wire}.${crypto.createHmac('sha256', secret).update(wire).digest('base64url')}`;
 }
+function signingFixture() {
+  const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const kid = crypto.randomUUID();
+  return {
+    privateKey,
+    kid,
+    signingKey: { ...privateKey.export({ format: 'jwk' }), kid, alg: 'RS256', use: 'sig' },
+    publicKey: { ...publicKey.export({ format: 'jwk' }), kid, alg: 'RS256', use: 'sig' },
+  };
+}
+function asymmetricJwt(fixture, payload) {
+  const header = Buffer.from(
+    JSON.stringify({ alg: 'RS256', typ: 'JWT', kid: fixture.kid }),
+  ).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const wire = `${header}.${body}`;
+  return `${wire}.${crypto.sign('sha256', Buffer.from(wire), fixture.privateKey).toString('base64url')}`;
+}
 function signedHeaders(body, overrides = {}) {
   const timestamp = String(Math.floor(Date.now() / 1000));
   const nonce = crypto.randomBytes(16).toString('base64url');
@@ -149,4 +167,6 @@ module.exports = {
   chunkedPost,
   freePort,
   runtimeWorkingDirectory,
+  signingFixture,
+  asymmetricJwt,
 };

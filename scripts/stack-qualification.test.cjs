@@ -129,3 +129,31 @@ test('recovery refuses a foreign process identity and never certifies a survivin
     /remains alive/u,
   );
 });
+
+const { signingFixture, asymmetricJwt } = require('./stack-qualification/contracts.cjs');
+test('synthetic gateway tokens verify only against their own public RS256 JWK', () => {
+  const keys = signingFixture();
+  const token = asymmetricJwt(keys, { sub: 'fixture', exp: 1800000000 });
+  const [header, payload, signature] = token.split('.');
+  assert.equal(JSON.parse(Buffer.from(header, 'base64url')).kid, keys.kid);
+  const publicKey = crypto.createPublicKey({ key: keys.publicKey, format: 'jwk' });
+  assert.equal(
+    crypto.verify(
+      'sha256',
+      Buffer.from(`${header}.${payload}`),
+      publicKey,
+      Buffer.from(signature, 'base64url'),
+    ),
+    true,
+  );
+  assert.equal(
+    crypto.verify(
+      'sha256',
+      Buffer.from(`${header}.${payload}changed`),
+      publicKey,
+      Buffer.from(signature, 'base64url'),
+    ),
+    false,
+  );
+  assert.equal(keys.publicKey.d, undefined);
+});

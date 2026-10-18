@@ -20,6 +20,8 @@ const {
   chunkedPost,
   freePort,
   runtimeWorkingDirectory,
+  signingFixture,
+  asymmetricJwt,
 } = require('./stack-qualification/contracts.cjs');
 const repo = path.resolve(__dirname, '..');
 const variants = {
@@ -77,6 +79,7 @@ async function main() {
     publishable: `sb_publishable_${crypto.randomBytes(24).toString('base64url')}`,
     service: `sb_secret_${crypto.randomBytes(24).toString('base64url')}`,
   };
+  const asymmetric = signingFixture();
   const now = Math.floor(Date.now() / 1000);
   const anon = jwt(synthetic.secret, { role: 'anon', iss: 'supabase', iat: now, exp: now + 3600 });
   const serviceRole = jwt(synthetic.secret, {
@@ -445,8 +448,13 @@ async function main() {
     const apiPort = await freePort();
     const dbPort = await freePort();
     const shadowPort = await freePort();
-    const config = `project_id = "${project}"\n[api]\nport = ${apiPort}\n[db]\nport = ${dbPort}\nshadow_port = ${shadowPort}\nmajor_version = 17\n[db.seed]\nenabled = false\n[auth]\nenabled = false\njwt_secret = "${synthetic.secret}"\npublishable_key = "${synthetic.publishable}"\nsecret_key = "${synthetic.service}"\nanon_key = "${anon}"\nservice_role_key = "${serviceRole}"\n[edge_runtime]\nenabled = true\ndeno_version = 2\n[functions.portal]\nverify_jwt = false\n[functions.jwt]\nverify_jwt = true\n`;
+    const config = `project_id = "${project}"\n[api]\nport = ${apiPort}\n[db]\nport = ${dbPort}\nshadow_port = ${shadowPort}\nmajor_version = 17\n[db.seed]\nenabled = false\n[auth]\nenabled = false\njwt_secret = "${synthetic.secret}"\nsigning_keys_path = "./signing-keys.json"\npublishable_key = "${synthetic.publishable}"\nsecret_key = "${synthetic.service}"\nanon_key = "${anon}"\nservice_role_key = "${serviceRole}"\n[edge_runtime]\nenabled = true\ndeno_version = 2\n[functions.portal]\nverify_jwt = false\n[functions.jwt]\nverify_jwt = true\n`;
     fs.writeFileSync(path.join(supabase, 'config.toml'), config);
+    fs.writeFileSync(
+      path.join(supabase, 'signing-keys.json'),
+      JSON.stringify([asymmetric.signingKey]) + '\n',
+      { mode: 0o600 },
+    );
     fs.writeFileSync(
       path.join(root, 'synthetic.env'),
       `PORTAL_SUPABASE_PUBLISHABLE_KEY=${synthetic.publishable}\n`,
@@ -470,6 +478,15 @@ async function main() {
     );
     assert.equal(runtimeEnv.SUPABASE_URL, 'http://kong:8000');
     assert.ok(runtimeEnv.SUPABASE_INTERNAL_FUNCTIONS_CONFIG);
+    const inlineJwks = JSON.parse(runtimeEnv.SUPABASE_JWKS);
+    assert.ok(inlineJwks.keys.some((key) => key.kid === asymmetric.kid && key.kty === 'RSA'));
+    for (const key of inlineJwks.keys)
+      assert.equal(key.d, undefined, 'Runtime JWKS must contain public material only');
+    write('synthetic-jwks-binding.json', {
+      kid: asymmetric.kid,
+      publicJwkSha256: hash(JSON.stringify(asymmetric.publicKey)),
+      runtimeJwksSha256: hash(runtimeEnv.SUPABASE_JWKS),
+    });
     runtimeEnv.PORTAL_SUPABASE_PUBLISHABLE_KEY = synthetic.publishable;
     // First config retains the JWT-enabled companion. Capture the actual CLI's bundled artifact.
     docker(['cp', `${runtimeName}:/root/index.ts`, path.join(root, 'bootstrap.ts')]);
@@ -638,7 +655,7 @@ async function main() {
     await portalCases(pairUrl, 'offline-pair', true);
     const jwtUrl = `http://${port}/functions/v1/jwt`;
     const requestTime = Math.floor(Date.now() / 1000);
-    const valid = jwt(synthetic.secret, {
+    const valid = asymmetricJwt(asymmetric, {
       sub: '11111111-1111-4111-8111-111111111111',
       role: 'authenticated',
       iat: requestTime,
@@ -647,7 +664,7 @@ async function main() {
     for (const [label, token, expected] of [
       ['valid', valid, 200],
       ['bad', valid.slice(0, -5) + 'wrong', 401],
-      ['expired', jwt(synthetic.secret, { sub: 'test', exp: requestTime - 60 }), 401],
+      ['expired', asymmetricJwt(asymmetric, { sub: 'test', exp: requestTime - 60 }), 401],
     ]) {
       const response = await fetch(jwtUrl, {
         method: 'POST',
