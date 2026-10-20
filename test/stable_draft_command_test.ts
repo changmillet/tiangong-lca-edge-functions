@@ -1,5 +1,5 @@
 import { assertEquals } from 'jsr:@std/assert';
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
+import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 
 import { resolveActorContext } from '../supabase/functions/_shared/command_runtime/actor_context.ts';
 import { AuthMethod } from '../supabase/functions/_shared/auth.ts';
@@ -371,6 +371,68 @@ Deno.test(
       assertEquals(authenticated, 1);
       assertEquals(read, 0);
       assertEquals(client.calls, []);
+    }
+  },
+);
+
+Deno.test(
+  'real Supabase transport makes one POST per stable draft RPC after disconnect or 503',
+  async () => {
+    const baseUrl = 'https://stable-draft-transport.invalid';
+    for (let index = 0; index < factories.length; index++) {
+      for (const failure of ['disconnect', '503']) {
+        const calls: Array<{
+          url: string;
+          method: string;
+          authorization: string | null;
+          profile: string | null;
+          body: unknown;
+        }> = [];
+        const client = createClient(baseUrl, 'sb_publishable_synthetic_stable_draft', {
+          db: { schema: 'api' },
+          auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+          global: {
+            headers: { Authorization: 'Bearer user-jwt' },
+            fetch: async (input, init) => {
+              const transport = new Request(input, init);
+              calls.push({
+                url: transport.url,
+                method: transport.method,
+                authorization: transport.headers.get('Authorization'),
+                profile: transport.headers.get('Content-Profile'),
+                body: await transport.json(),
+              });
+              if (failure === 'disconnect') throw new TypeError('synthetic disconnected response');
+              return Response.json(
+                { code: 'SYNTHETIC_UNAVAILABLE', message: 'synthetic 503' },
+                { status: 503 },
+              );
+            },
+          },
+        });
+        const handle = factories[index]({
+          resolveActor: async () => ({
+            ok: true,
+            value: {
+              userId: actorId,
+              accessToken: 'user-jwt',
+              supabase: client as unknown as SupabaseClient,
+            },
+          }),
+        });
+        const response = await handle(request());
+        assertEquals(response.status, 502);
+        assertEquals((await response.json()).ok, false);
+        assertEquals(calls, [
+          {
+            url: `${baseUrl}/rest/v1/rpc/${names[index]}`,
+            method: 'POST',
+            authorization: 'Bearer user-jwt',
+            profile: 'api',
+            body: { p_request_id: requestId, p_request: body.request },
+          },
+        ]);
+      }
     }
   },
 );
