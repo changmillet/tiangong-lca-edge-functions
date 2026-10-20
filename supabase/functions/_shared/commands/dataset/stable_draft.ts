@@ -6,6 +6,10 @@ import { callStableDraftRpc, type StableDraftRpcClient } from '../../db_rpc/stab
 import type { DatasetCommandExecutionResult } from './types.ts';
 
 const versionSchema = z.string().regex(/^\d{2}\.\d{2}\.\d{3}$/);
+// Dataset UUIDs follow the SDK shape, including historical fixed identities.
+const datasetIdSchema = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 const bodySchema = z.record(z.string(), z.unknown());
 const draftSchema = z.object({ version: versionSchema, jsonOrdered: bodySchema }).strict();
 
@@ -15,7 +19,7 @@ export const stableDraftRequestSchema = z
     request: z
       .object({
         table: z.enum(['contacts', 'sources', 'flows', 'processes']),
-        id: z.string().uuid(),
+        id: datasetIdSchema,
         expectedActorId: z.string().uuid(),
         expectedDrafts: z
           .array(draftSchema)

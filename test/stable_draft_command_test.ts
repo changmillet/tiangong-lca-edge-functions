@@ -125,11 +125,88 @@ Deno.test(
   },
 );
 
+Deno.test(
+  'stable draft handlers accept SDK-shaped dataset UUIDs while retaining actor binding',
+  async () => {
+    for (let index = 0; index < factories.length; index++) {
+      for (const id of [
+        '019a0880-1111-7abc-8def-0123456789ab',
+        'abcdef01-2345-f678-0123-456789abcdef',
+      ]) {
+        const input = { ...body, request: { ...body.request, id } };
+        const client = new FakeRpcClient();
+        const handle = handler(index, client);
+        assertEquals((await handle(request(input))).status, 200);
+        assertEquals(client.calls, [
+          { fn: names[index], args: { p_request_id: requestId, p_request: input.request } },
+        ]);
+        const mismatch = await handle(
+          request({ ...input, request: { ...input.request, expectedActorId: datasetId } }),
+        );
+        assertEquals(mismatch.status, 403);
+        assertEquals((await mismatch.json()).code, 'DATASET_ACTOR_MISMATCH');
+        assertEquals(client.calls.length, 1);
+      }
+    }
+  },
+);
+
+Deno.test(
+  'stable draft handlers preserve every original review point in review-in-progress conflicts',
+  async () => {
+    const details = {
+      table: 'processes',
+      id: datasetId,
+      reviews: [
+        {
+          table: 'processes',
+          id: datasetId,
+          version: '01.00.001',
+          userId: actorId,
+          stateCode: 20,
+          reviewId: '44444444-4444-4444-8444-444444444444',
+        },
+        {
+          table: 'processes',
+          id: datasetId,
+          version: '01.00.002',
+          userId: actorId,
+          stateCode: 30,
+          reviewId: null,
+        },
+      ],
+    };
+    for (let index = 0; index < factories.length; index++) {
+      const failure = {
+        ok: false,
+        code: 'DATASET_REVIEW_IN_PROGRESS',
+        status: 409,
+        message: 'The owner dataset family is under review; resume its existing review',
+        details,
+      };
+      const client = new FakeRpcClient({ data: failure, error: null });
+      const response = await handler(index, client)(request());
+      assertEquals(response.status, 409);
+      assertEquals(await response.json(), {
+        ok: false,
+        code: failure.code,
+        message: failure.message,
+        details,
+      });
+      assertEquals(client.calls, [
+        { fn: names[index], args: { p_request_id: requestId, p_request: body.request } },
+      ]);
+    }
+  },
+);
+
 Deno.test('stable draft handlers reject malformed and unsupported bodies before RPC', async () => {
   const invalid = [
     null,
     { ...body, actorId },
     { ...body, requestId: 'bad' },
+    { ...body, request: { ...body.request, id: 'ABCDEF01-2345-f678-0123-456789abcdef' } },
+    { ...body, request: { ...body.request, id: 'abcdef01-2345-f678-0123-456789abcde' } },
     { ...body, request: { ...body.request, modelId: datasetId } },
     { ...body, request: { ...body.request, table: 'lifecyclemodels' } },
     { ...body, request: { ...body.request, source: null } },
