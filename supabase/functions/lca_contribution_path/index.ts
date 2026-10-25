@@ -1,3 +1,4 @@
+import { parseSnapshotLciaAvailability } from '../_shared/lca_category_availability.ts';
 // Setup type definitions for built-in Supabase Runtime APIs
 import '@supabase/functions-js/edge-runtime.d.ts';
 
@@ -72,6 +73,7 @@ type SnapshotIndexProcessEntry = {
 type SnapshotIndexImpactEntry = {
   impact_id: string;
   impact_index: number;
+  impact_version?: string;
   impact_key: string;
   impact_name: string;
   unit: string;
@@ -85,6 +87,7 @@ type SnapshotIndexDocument = {
   process_map: SnapshotIndexProcessEntry[];
   impact_map: SnapshotIndexImpactEntry[];
   calculation_evidence?: unknown;
+  lcia_applicability?: unknown;
 };
 
 type SnapshotArtifactMeta = {
@@ -259,6 +262,15 @@ Deno.serve(async (req) => {
   if (impactIndex === null) {
     return json({ error: 'impact_not_in_snapshot', impact_id: impactId }, 404);
   }
+
+  const availability = parseSnapshotLciaAvailability(
+    snapshotIndex.data.lcia_applicability,
+    snapshotIndex.data.impact_map,
+  );
+  if (!availability) return json({ error: 'snapshot_lcia_availability_invalid' }, 409);
+  const category = availability.categories[impactIndex];
+  if (category.status === 'unavailable')
+    return json({ error: 'lcia_category_unavailable', reasons: category.reasons }, 409);
 
   const normalizedRequest = {
     version: REQUEST_VERSION,

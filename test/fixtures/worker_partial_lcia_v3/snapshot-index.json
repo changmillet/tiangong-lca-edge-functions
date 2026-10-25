@@ -1,0 +1,50 @@
+{
+  "impact_count": 2,
+  "impact_map": [
+    {
+      "impact_id": "01500b74-7ffb-463e-9bd4-72f17c2263ff",
+      "impact_index": 0,
+      "impact_key": "method:0",
+      "impact_name": "Method 0",
+      "impact_version": "01.00.000",
+      "unit": "kg"
+    },
+    {
+      "impact_id": "05316e7a-b254-4bea-9cf0-6bf33eb5c630",
+      "impact_index": 1,
+      "impact_key": "method:1",
+      "impact_name": "Method 1",
+      "impact_version": "01.00.000",
+      "unit": "kg"
+    }
+  ],
+  "lcia_applicability": {
+    "availability": {
+      "categories": [
+        {
+          "impact_index": 0,
+          "method_id": "01500b74-7ffb-463e-9bd4-72f17c2263ff",
+          "method_version": "01.00.000",
+          "reasons": [],
+          "status": "available"
+        },
+        {
+          "impact_index": 1,
+          "method_id": "05316e7a-b254-4bea-9cf0-6bf33eb5c630",
+          "method_version": "01.00.000",
+          "reasons": [
+            "lcia_factor_location_semantics_unresolved"
+          ],
+          "status": "unavailable"
+        }
+      ],
+      "completeness": "partial",
+      "policy_version": "lcia.applicability.source-bound.v2",
+      "schema_version": "lcia.category-availability.v1"
+    },
+    "policy_version": "lcia.applicability.source-bound.v2",
+    "schema_version": "lcia.applicability.evidence.v2"
+  },
+  "process_count": 1,
+  "snapshot_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+}

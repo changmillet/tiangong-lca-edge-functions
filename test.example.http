@@ -1,3 +1,6 @@
+# Worker #339 / PR #340 compatibility: existing LCA request/auth examples remain valid.
+# Current responses preserve unavailable LCIA categories as null plus reasons; selected
+# unavailable categories return lcia_category_unavailable. No request was executed.
 # Edges #495/#496 combined review at 8bbe26dbd1a15030c7ec0b60c570f2f62ffb365d:
 # all existing payloads and actor/service/public credential boundaries remain unchanged.
 # CLI/default-runtime qualification adds only synthetic hosted fixtures; this collection

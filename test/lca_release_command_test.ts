@@ -937,3 +937,72 @@ Deno.test(
     assertEquals(fixture.service.signedDownloadCalls.length, 2);
   },
 );
+
+Deno.test(
+  'private partial bundles remain readable and malformed completeness is rejected before signing',
+  async () => {
+    for (const valid of [true, false]) {
+      const actor = new FakeSupabase();
+      const service = new FakeSupabase();
+      const bundleContentHash = '7'.repeat(64);
+      const manifestObjectKey = `calculation-bundles/${RELEASE_RUN_ID}/${bundleContentHash}/calculation-bundle.json`;
+      const lciaAvailability = {
+        schema_version: 'lcia.category-availability.v1',
+        policy_version: 'lcia.applicability.source-bound.v2',
+        completeness: valid ? 'unavailable' : 'complete',
+        categories: [
+          {
+            impact_index: 0,
+            method_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            method_version: '01.00.000',
+            status: 'unavailable',
+            reasons: ['unresolved_applicability'],
+          },
+        ],
+      };
+      const manifest = {
+        schemaVersion: 'tiangong.calculation-bundle.v3',
+        bundleContentHash,
+        snapshot: { impactCount: 1 },
+        lciaAvailability,
+        artifacts: [
+          {
+            kind: 'lci',
+            path: 'chunks/lci-00000.jsonl.gz',
+            mediaType: 'application/x-ndjson',
+            compression: 'gzip',
+            sha256: '2'.repeat(64),
+            byteSize: 123,
+            recordCount: 1,
+          },
+        ],
+      };
+      const blob = new Blob([JSON.stringify(manifest)]);
+      actor.rpcResults.set(
+        'get_lcia_result_calculation_bundle',
+        rpcSuccess({
+          packageId: PACKAGE_ID,
+          productDownloads: [],
+          calculationBundle: {
+            schemaVersion: manifest.schemaVersion,
+            calculationId: RELEASE_RUN_ID,
+            bundleContentHash,
+            manifestUrl: `https://example.supabase.co/storage/v1/s3/lca_results/${manifestObjectKey}`,
+            manifestSha256: await sha256Blob(blob),
+            manifestByteSize: blob.size,
+            artifactCount: 1,
+          },
+        }),
+      );
+      service.downloadedObjects.set(`lca_results/${manifestObjectKey}`, blob);
+      const result = await executeLcaReleaseCommand(
+        { action: 'get_calculation_bundle', packageId: PACKAGE_ID },
+        actorFor(actor),
+        createLcaReleaseCommandRepository(actor as never, service as never),
+      );
+      assertEquals(result.ok, valid);
+      assertEquals(service.signedDownloadCalls.length, valid ? 2 : 0);
+      if (!result.ok) assertEquals(result.code, 'calculation_bundle_lcia_availability_invalid');
+    }
+  },
+);

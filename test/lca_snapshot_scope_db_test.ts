@@ -1,3 +1,5 @@
+import { LCIA_APPLICABILITY_POLICY_VERSION } from '../supabase/functions/_shared/lca_category_availability.ts';
+import { availabilityFixture } from './lca_category_availability_fixture.ts';
 import { assertEquals } from 'jsr:@std/assert';
 
 import {
@@ -144,6 +146,8 @@ Deno.test('verifySnapshotMatchesDataScope reports lookup failures closed', async
 const readyProcessFilter = (overrides: Record<string, unknown> = {}) => ({
   ...buildStoredFilterShape(),
   numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION,
+  lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
+  lcia_availability: availabilityFixture(),
   ...overrides,
 });
 

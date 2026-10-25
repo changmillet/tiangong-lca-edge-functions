@@ -1,10 +1,14 @@
+import { parseLciaAvailability, type LciaAvailability } from './lca_category_availability.ts';
+
 const SHA256_RE = /^[0-9a-f]{64}$/i;
 
 export const ALL_UNIT_QUERY_V1_FORMAT = 'all-unit-query:v1';
 export const ALL_UNIT_QUERY_V2_FORMAT = 'all-unit-query:v2';
+export const ALL_UNIT_QUERY_V3_FORMAT = 'all-unit-query:v3';
 
 const CALCULATION_BUNDLE_SCHEMA_VERSION = 'tiangong.calculation-bundle.v2';
 const LCIA_CHUNK_SCHEMA_VERSION = 'tiangong.calculation-bundle.lcia.v1';
+const PARTIAL_LCIA_CHUNK_SCHEMA_VERSION = 'tiangong.calculation-bundle.lcia.v2';
 
 export type AllUnitImpactEntry = {
   impact_id: string;
@@ -24,7 +28,7 @@ type AllUnitQueryV1 = {
 
 type AllUnitQueryV2Chunk = {
   path: string;
-  schemaVersion: typeof LCIA_CHUNK_SCHEMA_VERSION;
+  schemaVersion: typeof LCIA_CHUNK_SCHEMA_VERSION | typeof PARTIAL_LCIA_CHUNK_SCHEMA_VERSION;
   compression: 'gzip';
   sha256: string;
   byteSize: number;
@@ -35,9 +39,10 @@ type AllUnitQueryV2Chunk = {
 };
 
 type AllUnitQueryV2 = {
-  kind: 'v2';
-  version: 2;
-  format: typeof ALL_UNIT_QUERY_V2_FORMAT;
+  kind: 'v2' | 'v3';
+  version: 2 | 3;
+  format: typeof ALL_UNIT_QUERY_V2_FORMAT | typeof ALL_UNIT_QUERY_V3_FORMAT;
+  lciaAvailability: LciaAvailability | null;
   snapshotId: string;
   processCount: number;
   impactCount: number;
@@ -97,7 +102,11 @@ export function parseAllUnitQueryArtifact(
       detail: `expected=${options.expectedFormat} actual=${format || 'missing'}`,
     };
   }
-  if (format !== ALL_UNIT_QUERY_V1_FORMAT && format !== ALL_UNIT_QUERY_V2_FORMAT) {
+  if (
+    format !== ALL_UNIT_QUERY_V1_FORMAT &&
+    format !== ALL_UNIT_QUERY_V2_FORMAT &&
+    format !== ALL_UNIT_QUERY_V3_FORMAT
+  ) {
     return { ok: false, error: 'unsupported_query_artifact_format' };
   }
 
@@ -110,7 +119,7 @@ export function parseAllUnitQueryArtifact(
   if (!isNonNegativeSafeInteger(options.processCount) || expectedImpactCount === 0) {
     return invalid('snapshot axis is invalid');
   }
-  const impactAxis = validateImpactAxis(options.impacts, format === ALL_UNIT_QUERY_V2_FORMAT);
+  const impactAxis = validateImpactAxis(options.impacts, format !== ALL_UNIT_QUERY_V1_FORMAT);
   if (!impactAxis.ok) {
     return impactAxis;
   }
@@ -154,9 +163,13 @@ export function parseAllUnitQueryArtifact(
     };
   }
 
-  if (document.version !== 2) {
-    return invalid('v2 artifact version must be 2');
-  }
+  const isV3 = format === ALL_UNIT_QUERY_V3_FORMAT;
+  if (document.version !== (isV3 ? 3 : 2))
+    return invalid('query artifact version differs from format');
+  const availability = isV3
+    ? parseLciaAvailability(document.lciaAvailability, options.impacts)
+    : null;
+  if (isV3 && !availability) return invalid('v3 category availability is missing or invalid');
   const jobId = stringField(document, 'jobId');
   const processCount = numberField(document, 'processCount');
   const impactCount = numberField(document, 'impactCount');
@@ -169,7 +182,9 @@ export function parseAllUnitQueryArtifact(
     return invalid('v2 artifact axis count mismatch');
   }
 
-  const bundle = parseCalculationBundleRef(document.calculationBundle);
+  const partial = availability !== null && availability.completeness !== 'complete';
+  const bundle = parseCalculationBundleRef(document.calculationBundle, partial);
+  const chunkSchema = partial ? PARTIAL_LCIA_CHUNK_SCHEMA_VERSION : LCIA_CHUNK_SCHEMA_VERSION;
   if (!bundle.ok) {
     return bundle;
   }
@@ -181,7 +196,7 @@ export function parseAllUnitQueryArtifact(
   const chunks: AllUnitQueryV2Chunk[] = [];
   let expectedFirstProcessIndex = 0;
   for (let index = 0; index < rawChunks.length; index += 1) {
-    const parsedChunk = parseV2Chunk(rawChunks[index]);
+    const parsedChunk = parseV2Chunk(rawChunks[index], chunkSchema);
     if (!parsedChunk.ok) {
       return parsedChunk;
     }
@@ -202,7 +217,7 @@ export function parseAllUnitQueryArtifact(
     }
     chunks.push({
       ...chunk,
-      schemaVersion: LCIA_CHUNK_SCHEMA_VERSION,
+      schemaVersion: chunkSchema,
       compression: 'gzip',
       artifactUrl: artifactUrl.data,
     });
@@ -215,8 +230,9 @@ export function parseAllUnitQueryArtifact(
   return {
     ok: true,
     data: {
-      kind: 'v2',
-      version: 2,
+      kind: isV3 ? 'v3' : 'v2',
+      version: isV3 ? 3 : 2,
+      lciaAvailability: availability,
       format,
       snapshotId,
       processCount,
@@ -232,7 +248,7 @@ export async function readProcessImpactRow(
   impacts: AllUnitImpactEntry[],
   processIndex: number,
   fetchBytes: ArtifactBytesFetcher,
-): Promise<AllUnitQueryResult<number[]>> {
+): Promise<AllUnitQueryResult<Array<number | null>>> {
   if (!isNonNegativeSafeInteger(processIndex) || processIndex >= artifact.processCount) {
     return invalid('process index is outside the query artifact axis');
   }
@@ -247,7 +263,7 @@ export async function readProcessImpactRow(
   if (!chunk) {
     return invalid('no v2 chunk covers the requested process index');
   }
-  const decoded = await decodeV2Chunk(chunk, impacts, fetchBytes);
+  const decoded = await decodeV2Chunk(chunk, impacts, fetchBytes, artifact.lciaAvailability);
   if (!decoded.ok) {
     return decoded;
   }
@@ -265,6 +281,10 @@ export async function readImpactColumn(
   if (!isNonNegativeSafeInteger(impactIndex) || impactIndex >= artifact.impactCount) {
     return invalid('impact index is outside the query artifact axis');
   }
+  const category =
+    artifact.kind === 'v1' ? null : artifact.lciaAvailability?.categories[impactIndex];
+  if (category?.status === 'unavailable')
+    return { ok: false, error: 'lcia_category_unavailable', detail: category.reasons.join(',') };
   const requested = processIndices === null ? null : new Set(processIndices);
   if (requested?.size) {
     for (const processIndex of requested) {
@@ -294,13 +314,16 @@ export async function readImpactColumn(
     ) {
       continue;
     }
-    const decoded = await decodeV2Chunk(chunk, impacts, fetchBytes);
+    const decoded = await decodeV2Chunk(chunk, impacts, fetchBytes, artifact.lciaAvailability);
     if (!decoded.ok) {
       return decoded;
     }
     for (const [processIndex, row] of decoded.data) {
       if (!requested || requested.has(processIndex)) {
-        values.set(processIndex, row[impactIndex]);
+        const value = row[impactIndex];
+        if (value === null || !Number.isFinite(value))
+          return invalid('requested category contains an unavailable or invalid numeric value');
+        values.set(processIndex, value);
       }
     }
   }
@@ -315,7 +338,8 @@ async function decodeV2Chunk(
   chunk: AllUnitQueryV2Chunk,
   impacts: AllUnitImpactEntry[],
   fetchBytes: ArtifactBytesFetcher,
-): Promise<AllUnitQueryResult<Map<number, number[]>>> {
+  availability: LciaAvailability | null,
+): Promise<AllUnitQueryResult<Map<number, Array<number | null>>>> {
   const fetched = await fetchBytes(chunk.artifactUrl);
   if (!fetched.ok) {
     return fetched;
@@ -362,7 +386,7 @@ async function decodeV2Chunk(
       impact.impact_index,
     );
   }
-  const rows = new Map<number, number[]>();
+  const rows = new Map<number, Array<number | null>>();
   for (let recordIndex = 0; recordIndex < lines.length; recordIndex += 1) {
     let rawRecord: unknown;
     try {
@@ -378,13 +402,7 @@ async function decodeV2Chunk(
     const method = asRecord(record?.method);
     const processIndex = record?.processIndex;
     const meanAmount = record?.meanAmount;
-    if (
-      !record ||
-      !method ||
-      !isNonNegativeSafeInteger(processIndex) ||
-      typeof meanAmount !== 'number' ||
-      !Number.isFinite(meanAmount)
-    ) {
+    if (!record || !method || !isNonNegativeSafeInteger(processIndex)) {
       return invalid(`v2 chunk ${chunk.path} contains an invalid LCIA record`);
     }
     const methodId = stringField(method, 'id');
@@ -392,6 +410,27 @@ async function decodeV2Chunk(
     const impactIndex = impactByIdentity.get(impactIdentity(methodId, methodVersion));
     if (impactIndex === undefined) {
       return invalid(`v2 chunk ${chunk.path} contains an unknown LCIA method identity`);
+    }
+
+    const category = availability?.categories[impactIndex];
+    if (chunk.schemaVersion === PARTIAL_LCIA_CHUNK_SCHEMA_VERSION) {
+      if (
+        !category ||
+        record.status !== category.status ||
+        !Array.isArray(record.reasons) ||
+        JSON.stringify(record.reasons) !== JSON.stringify(category.reasons) ||
+        (category.status === 'unavailable'
+          ? meanAmount !== null
+          : typeof meanAmount !== 'number' || !Number.isFinite(meanAmount))
+      ) {
+        return invalid('LCIA record status/value/reasons differ from category availability');
+      }
+    } else if (
+      typeof meanAmount !== 'number' ||
+      !Number.isFinite(meanAmount) ||
+      category?.status === 'unavailable'
+    ) {
+      return invalid('LCIA numeric record is invalid');
     }
 
     const expectedProcessIndex = chunk.firstProcessIndex + Math.floor(recordIndex / impacts.length);
@@ -407,7 +446,7 @@ async function decodeV2Chunk(
     if (row[impactIndex] !== undefined) {
       return invalid(`v2 chunk ${chunk.path} contains a duplicate LCIA record`);
     }
-    row[impactIndex] = meanAmount;
+    row[impactIndex] = meanAmount as number | null;
   }
 
   for (
@@ -416,14 +455,21 @@ async function decodeV2Chunk(
     processIndex += 1
   ) {
     const row = rows.get(processIndex);
-    if (!row || row.length !== impacts.length || row.some((value) => !Number.isFinite(value))) {
+    if (
+      !row ||
+      row.length !== impacts.length ||
+      row.some((value) => value !== null && !Number.isFinite(value))
+    ) {
       return invalid(`v2 chunk ${chunk.path} has an incomplete process row`);
     }
   }
   return { ok: true, data: rows };
 }
 
-function parseCalculationBundleRef(raw: unknown): AllUnitQueryResult<CalculationBundleRef> {
+function parseCalculationBundleRef(
+  raw: unknown,
+  partial: boolean,
+): AllUnitQueryResult<CalculationBundleRef> {
   const value = asRecord(raw);
   if (!value) {
     return invalid('v2 calculationBundle is missing');
@@ -438,7 +484,8 @@ function parseCalculationBundleRef(raw: unknown): AllUnitQueryResult<Calculation
     artifactCount: numberField(value, 'artifactCount'),
   };
   if (
-    parsed.schemaVersion !== CALCULATION_BUNDLE_SCHEMA_VERSION ||
+    parsed.schemaVersion !==
+      (partial ? 'tiangong.calculation-bundle.v3' : CALCULATION_BUNDLE_SCHEMA_VERSION) ||
     !parsed.calculationId ||
     !SHA256_RE.test(parsed.bundleContentHash) ||
     !parsed.manifestUrl ||
@@ -451,7 +498,7 @@ function parseCalculationBundleRef(raw: unknown): AllUnitQueryResult<Calculation
   return { ok: true, data: parsed };
 }
 
-function parseV2Chunk(raw: unknown): AllUnitQueryResult<RawV2Chunk> {
+function parseV2Chunk(raw: unknown, schemaVersion: string): AllUnitQueryResult<RawV2Chunk> {
   const value = asRecord(raw);
   if (!value) {
     return invalid('v2 chunk must be an object');
@@ -468,7 +515,7 @@ function parseV2Chunk(raw: unknown): AllUnitQueryResult<RawV2Chunk> {
   };
   if (
     !isSafeRelativePath(parsed.path) ||
-    parsed.schemaVersion !== LCIA_CHUNK_SCHEMA_VERSION ||
+    parsed.schemaVersion !== schemaVersion ||
     parsed.compression !== 'gzip' ||
     !SHA256_RE.test(parsed.sha256) ||
     !isPositiveSafeInteger(parsed.byteSize) ||

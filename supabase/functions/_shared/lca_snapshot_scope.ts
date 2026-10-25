@@ -1,3 +1,7 @@
+import {
+  LCIA_APPLICABILITY_POLICY_VERSION,
+  parseLciaAvailability,
+} from './lca_category_availability.ts';
 import reviewedStaticCacheBundleManifest from './lca_static_cache_bundle_manifest.json' with { type: 'json' };
 
 export const PUBLIC_PROCESS_STATE = 100;
@@ -334,8 +338,14 @@ export function parseLcaDataScope(raw: unknown): LcaDataScope {
  * its own `SnapshotBuildConfig`, so a marker present on a proposed filter can never authorize a
  * pre-existing artifact.
  */
-export function buildSnapshotNumericalPolicyFields(): { numerical_policy_version: string } {
-  return { numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION };
+export function buildSnapshotNumericalPolicyFields(): {
+  numerical_policy_version: string;
+  lcia_applicability_policy_version: string;
+} {
+  return {
+    numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION,
+    lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
+  };
 }
 
 export function buildPublicPlusOwnerDraftScopeManifest(userId: string): LcaScopeManifest {
@@ -436,6 +446,8 @@ export type SnapshotProcessFilterRejection =
 export type SnapshotEvidenceRejection =
   | 'snapshot_numerical_policy_version_missing'
   | 'snapshot_numerical_policy_version_not_current'
+  | 'snapshot_lcia_applicability_policy_version_not_current'
+  | 'snapshot_lcia_availability_invalid'
   | SnapshotProcessFilterRejection;
 
 /**
@@ -479,6 +491,11 @@ export function rejectNonCurrentSnapshotEvidence(raw: unknown): SnapshotEvidence
   if (marker !== NUMERICAL_SNAPSHOT_POLICY_VERSION) {
     return 'snapshot_numerical_policy_version_not_current';
   }
+  const filter = raw as Record<string, unknown>;
+  if (filter.lcia_applicability_policy_version !== LCIA_APPLICABILITY_POLICY_VERSION)
+    return 'snapshot_lcia_applicability_policy_version_not_current';
+  if (filter.lcia_enabled !== false && !parseLciaAvailability(filter.lcia_availability))
+    return 'snapshot_lcia_availability_invalid';
   return rejectNonNumericalSnapshotProcessFilter(raw);
 }
 

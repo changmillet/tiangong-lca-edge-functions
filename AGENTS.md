@@ -39,9 +39,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: '2026-10-25'
-lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
-lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
+lastReviewedAt: 2026-10-25
+lastReviewedCommit: e13d8c2aee23fc58241b64053007bbcdb14d8524
+lastReviewedNote: 'Reviewed Worker #339 / PR #340 companion against base e13d8c2: current applicability admission, exact category availability, nullable partial LCIA, immutable query/bundle validation and consumer rejection paths; local synthetic proof remains separate from native acceptance and deployment.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
@@ -167,6 +167,8 @@ Do not infer routine workflow from GitHub default-branch UI alone.
 - do not copy the same rule into multiple docs just to make it easier to find
 
 ## Hard Boundaries
+
+- Current LCIA calculation/cache admission requires Worker applicability policy v2 and category availability; partial private results preserve unavailable values as null with reasons. Complete publication remains Database-owned. Read `docs/agents/repo-architecture.md` under LCIA applicability before changing these result wires.
 
 - Portal V3 requires a canonical HMAC-bound `allowedBrandCodes` set and uses only scoped Database V3; LCIA request V2 similarly uses scoped LCIA V2 and rechecks visibility/publication on every cache hit. There is no unscoped fallback for either wire.
 - Portal V2 is an explicit wire-version opt-in on the same signed endpoint. It calls only the additive public V2 Database API, validates best-version groups plus every exact member, and uses opaque query-bound continuation. V1 callers retain their old public API contract. Never relabel a V1 response as V2.

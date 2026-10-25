@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: '2026-10-25'
-lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
-lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
+lastReviewedAt: 2026-10-25
+lastReviewedCommit: e13d8c2aee23fc58241b64053007bbcdb14d8524
+lastReviewedNote: 'Reviewed Worker #339 / PR #340 companion against base e13d8c2: current applicability admission, exact category availability, nullable partial LCIA, immutable query/bundle validation and consumer rejection paths; local synthetic proof remains separate from native acceptance and deployment.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -331,6 +331,16 @@ The artifact path deliberately has two identities. Actor-bound RPCs authorize th
 Calculation Bundle reads follow the same projection rule. The database returns only the manager-authorized immutable bundle ref and role-bound product download descriptors. Edge accepts historical `tiangong.calculation-bundle.v1` and current `tiangong.calculation-bundle.v2`, downloads the private manifest, verifies its exact size and SHA-256 plus exact durable-schema/content-hash/artifact-count binding, rejects unsafe child paths, and returns short-lived signed URLs for preview shards. It separately validates and signs the fixed LCIA XLSX/CSV, LCI Parquet/CSV, and whole-bundle audit roles with semantic filenames. Raw Worker object URLs and storage locators are never browser download contracts.
 
 `lca_release_results` exposes current or superseded public release metadata, source-Process-to-Model/Result identity projections, and signed artifact downloads without requiring a session. Process projections bind an exact Process UUID/version and return no storage locator. A matching Supabase project publishable key, including the configured legacy anon key, may appear as a Bearer credential on ordinary browser-client requests and remains a public read rather than actor authentication. Any other Authorization header must authenticate successfully, and private release reads remain subject to the database projection's manager check. The endpoint never signs an object until the database returns an authorized bucket/object-key projection. It resolves the authoritative release version and profile before signing, returns a server-derived `downloadFilename`, and binds that same semantic filename into the signed URL rather than exposing the content-addressed object name to browser downloads.
+
+### LCIA applicability and partial calculation results
+
+Worker's current applicability policy is `lcia.applicability.source-bound.v2`. New calculation admission requires its Worker-authored `lcia_applicability_policy_version` and validated `lcia_availability` receipt on the stored READY filter before cached-result lookup or enqueue. Only the explicit Worker-authored `lcia_enabled=false` inventory-only marker exempts the receipt requirement; absent flags do not. The receipt retains the complete ordered method/version axis and distinguishes `complete`, `partial`, and `unavailable`; source coverage alone does not prove category availability. The snapshot index owns the receipt at `lcia_applicability.availability`.
+
+`all-unit-query:v3` binds the same receipt as `lciaAvailability`; complete bundles retain v2 numeric chunks, while partial/unavailable bundles use `tiangong.calculation-bundle.v3` and LCIA record v2. Each v2 LCIA record has explicit `status` and `reasons`, with a finite `meanAmount` only for available categories and null for unavailable categories. Edge verifies identity, ordering, hashes and state consistency before returning cells. Process-all-impact queries retain unavailable rows and return the receipt as `meta.lcia_availability`. Selected-category comparison, ranking and contribution requests reject unavailable categories with `lcia_category_unavailable`; they never calculate totals or substitute zero. A query receipt differing from the current snapshot is rejected, including a historical cached query offered as a current result.
+
+Private preview metadata is optional and uses exact method ID/version pairs from the frozen snapshot axis. Query filters restrict both IDs and versions, and returned cross-pair rows are ignored. Version and unit labels always remain the snapshot's frozen values; current/latest metadata cannot relabel old numeric results.
+
+Historical v1/v2 artifact parsers remain available for authorized history/administrative reads. Current calculation admission does not reuse those old semantics. Private Calculation Bundle reads and preview accept partial evidence while preserving available LCI and LCIA; private readiness does not authorize complete LCIA, aggregate scores, Portal staging or full publication. Database publication guards remain the authority for those transitions. Deploy the compatible source producer, Worker, Edge and frontend consumers together before activating the new policy.
 
 ## Database Boundary
 

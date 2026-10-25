@@ -65,9 +65,10 @@ Deno.test(
           {
             impact_id: 'impact-climate',
             impact_key: 'climate-change',
+            impact_version: '01.00.000',
             impact_index: 0,
             impact_name: '11111111-1111-4111-8111-111111111111',
-            unit: '',
+            unit: 'kg CO2 equivalents',
           },
           {
             impact_id: 'impact-acidification',
@@ -183,6 +184,7 @@ Deno.test(
         { processId: TEST_PROCESS_B, processVersion: '01.00.001' },
       ],
       impactCategoryIds: ['impact-climate'],
+      impactRefs: [{ impactCategoryId: 'impact-climate', impactVersion: '01.00.000' }],
     });
   },
 );
@@ -606,3 +608,53 @@ Deno.test('exact public impact batch rejects inconsistent artifact/index binding
     assertEquals(projectPublishedExactProcessesOneImpact(fixture), null);
   }
 });
+
+Deno.test(
+  'private preview keeps the frozen method revision and unit when newer metadata exists',
+  () => {
+    const impactId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const projected = projectLciaResultPackagePreviewRows({
+      preview: { inputManifest: { processes: [{ id: TEST_PROCESS_A, version: '01.00.000' }] } },
+      request: { action: 'preview_package', packageId: '55555555-5555-4555-8555-555555555555' },
+      snapshotIndex: {
+        version: 1,
+        snapshot_id: TEST_SNAPSHOT_ID,
+        process_count: 1,
+        impact_count: 1,
+        process_map: [
+          { process_id: TEST_PROCESS_A, process_version: '01.00.000', process_index: 0 },
+        ],
+        impact_map: [
+          {
+            impact_id: impactId,
+            impact_version: '01.00.000',
+            impact_index: 0,
+            impact_name: 'Frozen method',
+            unit: 'kg',
+          },
+        ],
+      },
+      resolvedValues: {
+        snapshotId: TEST_SNAPSHOT_ID,
+        impactIndex: 0,
+        valuesByProcessIndex: new Map([[0, 17.5]]),
+      },
+      impactMetadata: [
+        {
+          impactCategoryId: impactId,
+          impactVersion: '02.00.000',
+          impactName: 'New method',
+          unit: 'm3',
+        },
+      ],
+    });
+    assertEquals(projected.detailPage.status, 'ready');
+    assertEquals(projected.detailPage.rows[0].value, 17.5);
+    assertEquals(projected.detailPage.rows[0].impactVersion, '01.00.000');
+    assertEquals(projected.detailPage.rows[0].unit, 'kg');
+    assertEquals(projected.detailPage.rows[0].impactName, 'Frozen method');
+    assertEquals(previewMetadataRefsFromProjection(projected).impactRefs, [
+      { impactCategoryId: impactId, impactVersion: '01.00.000' },
+    ]);
+  },
+);

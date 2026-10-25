@@ -1,3 +1,4 @@
+import { parseLciaAvailability } from '../../lca_category_availability.ts';
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 
 import type { ActorContext } from '../../command_runtime/actor_context.ts';
@@ -42,6 +43,7 @@ const RELEASE_STORAGE_PREFIX = 'lca-releases/v1';
 const SUPPORTED_CALCULATION_BUNDLE_SCHEMAS = new Set([
   'tiangong.calculation-bundle.v1',
   'tiangong.calculation-bundle.v2',
+  'tiangong.calculation-bundle.v3',
 ]);
 const CALCULATION_DOWNLOAD_ROLES = new Map([
   [
@@ -521,6 +523,23 @@ async function getCalculationBundle(
       'calculation_bundle_manifest_binding_mismatch',
       409,
       'Calculation Bundle manifest does not bind its durable schema, content hash, and artifact count',
+    );
+  }
+
+  const availability = parseLciaAvailability(manifest.lciaAvailability);
+  if (
+    (durableSchemaVersion === 'tiangong.calculation-bundle.v3' ||
+      manifest.lciaAvailability !== undefined) &&
+    (!availability ||
+      (durableSchemaVersion === 'tiangong.calculation-bundle.v3'
+        ? availability.completeness === 'complete'
+        : availability.completeness !== 'complete') ||
+      availability.categories.length !== recordValue(manifest.snapshot)?.impactCount)
+  ) {
+    return failure(
+      'calculation_bundle_lcia_availability_invalid',
+      409,
+      'Calculation Bundle category availability is invalid',
     );
   }
 

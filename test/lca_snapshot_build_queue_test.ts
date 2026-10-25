@@ -1,3 +1,4 @@
+import { LCIA_APPLICABILITY_POLICY_VERSION } from '../supabase/functions/_shared/lca_category_availability.ts';
 import { assert, assertEquals, assertMatch } from 'jsr:@std/assert';
 
 import { ensureLcaSnapshotBuildQueued } from '../supabase/functions/_shared/lca_snapshot_build_queue.ts';
@@ -126,6 +127,7 @@ Deno.test(
     const identity = JSON.stringify({
       version: 'lca_snapshot_build_v3',
       numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION,
+      lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
       scope: 'full_library',
       process_filter: processFilter,
       payload,

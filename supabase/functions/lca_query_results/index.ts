@@ -12,6 +12,10 @@ import {
 } from '../_shared/lca_all_unit_query_artifact.ts';
 import { ensureLcaAllUnitSolveQueued } from '../_shared/lca_all_unit_solve_queue.ts';
 import {
+  lciaAvailabilityMatches,
+  parseSnapshotLciaAvailability,
+} from '../_shared/lca_category_availability.ts';
+import {
   fetchProcessScopeLookup,
   matchesProcessDataScope,
   processScopeLookupKey,
@@ -93,6 +97,7 @@ type SnapshotIndexDocument = {
   process_map: SnapshotIndexProcessEntry[];
   impact_map: SnapshotIndexImpactEntry[];
   calculation_evidence?: unknown;
+  lcia_applicability?: unknown;
 };
 
 type SnapshotArtifactMeta = {
@@ -238,6 +243,12 @@ Deno.serve(async (req) => {
   }
   const calculationEvidenceBinding = calculationEvidence.binding;
 
+  const snapshotAvailability = parseSnapshotLciaAvailability(
+    snapshotIndex.data.lcia_applicability,
+    snapshotIndex.data.impact_map,
+  );
+  if (!snapshotAvailability) return json({ error: 'snapshot_lcia_availability_invalid' }, 409);
+
   const latestAllUnit = await fetchLatestAllUnit(snapshotId, userId);
   if (!latestAllUnit.ok) {
     return json({ error: latestAllUnit.error }, latestAllUnit.status);
@@ -289,6 +300,14 @@ Deno.serve(async (req) => {
       },
       500,
     );
+  }
+
+  if (
+    parsedQueryArtifact.data.kind !== 'v3' ||
+    !parsedQueryArtifact.data.lciaAvailability ||
+    !lciaAvailabilityMatches(snapshotAvailability, parsedQueryArtifact.data.lciaAvailability)
+  ) {
+    return json({ error: 'query_artifact_lcia_availability_mismatch' }, 409);
   }
 
   if (mode === 'process_all_impacts') {
@@ -349,11 +368,23 @@ Deno.serve(async (req) => {
 
     const values = impacts.map((impact) => ({
       impact_id: impact.impact_id,
+      impact_version: impact.impact_version,
       impact_index: impact.impact_index,
       impact_key: impact.impact_key,
       impact_name: impact.impact_name,
       unit: impact.unit,
-      value: hRow.data[impact.impact_index] * scale,
+      value:
+        hRow.data[impact.impact_index] === null
+          ? null
+          : (hRow.data[impact.impact_index] as number) * scale,
+      ...(parsedQueryArtifact.data.kind === 'v3'
+        ? {
+            status:
+              parsedQueryArtifact.data.lciaAvailability!.categories[impact.impact_index].status,
+            reasons:
+              parsedQueryArtifact.data.lciaAvailability!.categories[impact.impact_index].reasons,
+          }
+        : {}),
     }));
 
     return json(
@@ -370,6 +401,9 @@ Deno.serve(async (req) => {
           cache_hit: false,
           computed_at: computedAt,
           query_artifact_format: latestAllUnit.row.query_artifact_format,
+          ...(parsedQueryArtifact.data.kind === 'v3'
+            ? { lcia_availability: parsedQueryArtifact.data.lciaAvailability }
+            : {}),
           ...(calculationEvidenceBinding
             ? { calculation_evidence: calculationEvidenceBinding }
             : {}),
@@ -519,6 +553,9 @@ Deno.serve(async (req) => {
           cache_hit: false,
           computed_at: latestAllUnit.row.computed_at,
           query_artifact_format: latestAllUnit.row.query_artifact_format,
+          ...(parsedQueryArtifact.data.kind === 'v3'
+            ? { lcia_availability: parsedQueryArtifact.data.lciaAvailability }
+            : {}),
           ...(calculationEvidenceBinding
             ? { calculation_evidence: calculationEvidenceBinding }
             : {}),
@@ -593,6 +630,9 @@ Deno.serve(async (req) => {
         cache_hit: false,
         computed_at: latestAllUnit.row.computed_at,
         query_artifact_format: latestAllUnit.row.query_artifact_format,
+        ...(parsedQueryArtifact.data.kind === 'v3'
+          ? { lcia_availability: parsedQueryArtifact.data.lciaAvailability }
+          : {}),
         ...(calculationEvidenceBinding ? { calculation_evidence: calculationEvidenceBinding } : {}),
       },
     },
@@ -1249,10 +1289,12 @@ function queryArtifactReadErrorResponse(result: {
       error: result.error,
       ...(result.detail ? { detail: result.detail } : {}),
     },
-    result.error === 'all_unit_query_artifact_chunk_fetch_failed' ||
-      result.error === 'all_unit_query_artifact_fetch_failed'
-      ? 502
-      : 500,
+    result.error === 'lcia_category_unavailable'
+      ? 409
+      : result.error === 'all_unit_query_artifact_chunk_fetch_failed' ||
+          result.error === 'all_unit_query_artifact_fetch_failed'
+        ? 502
+        : 500,
   );
 }
 

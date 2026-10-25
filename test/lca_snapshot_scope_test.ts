@@ -1,3 +1,5 @@
+import { LCIA_APPLICABILITY_POLICY_VERSION } from '../supabase/functions/_shared/lca_category_availability.ts';
+import { availabilityFixture } from './lca_category_availability_fixture.ts';
 import { assertEquals, assertMatch, assertNotEquals } from 'jsr:@std/assert';
 
 import {
@@ -176,6 +178,7 @@ Deno.test('every scope list or range producer carries exact 100 and never 120', 
   assertEquals(buildSnapshotContainsFilter(versioned), {
     ...versioned,
     numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION,
+    lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
   });
 });
 
@@ -189,6 +192,7 @@ Deno.test('Edge binds the Worker-owned numerical policy marker verbatim', () => 
   );
   assertEquals(buildSnapshotNumericalPolicyFields(), {
     numerical_policy_version: 'public-numerical-state-100-excluding-result-120:v1',
+    lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
   });
 });
 
@@ -245,13 +249,20 @@ Deno.test('stored snapshot evidence requires a current marker, never a 100-shape
 
   // The current marker is accepted, and filter-shape failures still surface through it.
   assertEquals(
-    rejectNonCurrentSnapshotEvidence({ ...statesOnly, numerical_policy_version: currentMarker }),
+    rejectNonCurrentSnapshotEvidence({
+      ...statesOnly,
+      lcia_availability: availabilityFixture(),
+      lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
+      numerical_policy_version: currentMarker,
+    }),
     null,
   );
   assertEquals(
     rejectNonCurrentSnapshotEvidence({
       ...statesOnly,
       process_states: [100, 120],
+      lcia_availability: availabilityFixture(),
+      lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
       numerical_policy_version: currentMarker,
     }),
     'snapshot_published_result_process_state_not_numerical',
@@ -260,12 +271,19 @@ Deno.test('stored snapshot evidence requires a current marker, never a 100-shape
     rejectNonCurrentSnapshotEvidence({
       ...statesOnly,
       process_states: DEFAULT_PUBLISHED_PROCESS_STATES,
+      lcia_availability: availabilityFixture(),
+      lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
       numerical_policy_version: currentMarker,
     }),
     'snapshot_retired_published_state_range_not_numerical',
   );
   assertEquals(
-    rejectNonCurrentSnapshotEvidence({ all_states: true, numerical_policy_version: currentMarker }),
+    rejectNonCurrentSnapshotEvidence({
+      all_states: true,
+      lcia_availability: availabilityFixture(),
+      lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
+      numerical_policy_version: currentMarker,
+    }),
     'snapshot_all_states_not_numerical',
   );
 });
@@ -279,10 +297,35 @@ Deno.test('candidate evidence decision fails closed before cache or enqueue', ()
     all_states: false,
     process_states: [100],
     include_user_id: 'user-1',
+    lcia_availability: availabilityFixture(),
     numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION,
+    lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
   };
 
   assertEquals(evaluateSnapshotEvidenceForNewCalculation(candidate(current)), { ok: true });
+  assertEquals(
+    evaluateSnapshotEvidenceForNewCalculation(
+      candidate({ ...current, lcia_enabled: false, lcia_availability: undefined }),
+    ),
+    { ok: true },
+  );
+  for (const [change, error] of [
+    [
+      { lcia_applicability_policy_version: 'old' },
+      'snapshot_lcia_applicability_policy_version_not_current',
+    ],
+    [{ lcia_availability: undefined }, 'snapshot_lcia_availability_invalid'],
+    [
+      { lcia_availability: { ...availabilityFixture(), completeness: 'complete' } },
+      'snapshot_lcia_availability_invalid',
+    ],
+  ] as const) {
+    assertEquals(evaluateSnapshotEvidenceForNewCalculation(candidate({ ...current, ...change })), {
+      ok: false,
+      status: 409,
+      error,
+    });
+  }
   // No marker, retired marker, and no ready artifact all fail closed.
   assertEquals(
     evaluateSnapshotEvidenceForNewCalculation(
@@ -483,6 +526,7 @@ Deno.test('query/build helpers carry exact worker and LCIA proof contracts', asy
   assertEquals(buildSnapshotContainsFilter(filter), {
     ...filter,
     numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION,
+    lcia_applicability_policy_version: LCIA_APPLICABILITY_POLICY_VERSION,
   });
 
   const payload = buildSnapshotBuildPayloadFields(filter);

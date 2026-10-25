@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: '2026-10-25'
-lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
-lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
+lastReviewedAt: 2026-10-25
+lastReviewedCommit: e13d8c2aee23fc58241b64053007bbcdb14d8524
+lastReviewedNote: 'Reviewed Worker #339 / PR #340 companion against base e13d8c2: current applicability admission, exact category availability, nullable partial LCIA, immutable query/bundle validation and consumer rejection paths; local synthetic proof remains separate from native acceptance and deployment.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -99,6 +99,10 @@ The reviewed pnpm setup Action is v3.1.1 at exact commit `a0881977cd8ea73b1ed212
 Validation includes `node --test scripts/dependency-ci-contract.test.cjs`, frozen install, `pnpm lint`, `pnpm check`, and strict Docpact validation/lint. Preserve actual updater and candidate CI receipts before claiming hosted coverage. Source delivery, promotion, root integration and any later Function deployment remain separate outcomes.
 
 Sources: [upstream Deno fetcher](https://github.com/dependabot/dependabot-core/blob/main/deno/lib/dependabot/deno/file_fetcher.rb), [upstream Deno parser](https://github.com/dependabot/dependabot-core/blob/main/deno/lib/dependabot/deno/file_parser.rb), [supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories), and [Dependabot branch options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#target-branch).
+
+### Partial LCIA compatibility proof
+
+For Worker #339 / PR #340 companions, run `test/lca_category_availability_test.ts`, `test/lca_all_unit_query_artifact_test.ts`, `test/lca_snapshot_scope_test.ts`, `test/lca_snapshot_scope_db_test.ts`, `test/data_product_command_test.ts`, `test/data_product_package_preview_projection_test.ts`, and `test/lca_release_command_test.ts` with the exact Deno baseline, then the canonical gates. Prove finite zero and negative values remain numeric; unavailable categories retain null plus reasons; malformed completeness, status/value inconsistency, stale policies, method-version drift and chunk-integrity drift fail closed; selected unavailable categories cannot enter ranking/contribution work. Private partial bundle readability must not grant publication authority. Package preview regressions must preserve a frozen version/unit when newer metadata exists, and optional metadata queries must retain exact revision pairs. The native Worker partial fixture reader additionally checks the actual emitted nullable record wire. Local synthetic fixtures do not qualify real default rules, a native Worker candidate, hosted deployment or production source assets.
 
 ## Validation Matrix
 

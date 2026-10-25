@@ -11,3 +11,5 @@ Dockerfile*
 LICENSE
 .eslintcache
 *.lock
+# Byte-exact native Worker output: manifest/query hashes bind these fixture bytes.
+test/fixtures/worker_partial_lcia_v3/**

@@ -92,6 +92,7 @@ type DataProductCommandRepositoryOptions = {
 export type DataProductPreviewMetadataRequest = {
   processes: Array<{ processId: string; processVersion: string }>;
   impactCategoryIds: string[];
+  impactRefs?: Array<{ impactCategoryId: string; impactVersion: string }>;
 };
 
 export type DataProductPreviewMetadataResult =
@@ -943,7 +944,13 @@ async function fetchPreviewMetadata(
   request: DataProductPreviewMetadataRequest,
 ): Promise<DataProductPreviewMetadataResult> {
   const processRefs = uniqueProcessRefs(request.processes);
-  const impactCategoryIds = uniqueStrings(request.impactCategoryIds);
+  const impactCategoryIds = new Set(request.impactCategoryIds);
+  const byIdentity = new Map(
+    (request.impactRefs ?? [])
+      .filter((ref) => impactCategoryIds.has(ref.impactCategoryId) && ref.impactVersion)
+      .map((ref) => [processLookupKey(ref.impactCategoryId, ref.impactVersion), ref]),
+  );
+  const impactRefs = Array.from(byIdentity.values());
   const warnings: Array<{ code: string; message: string; details?: unknown }> = [];
 
   const processesResult =
@@ -959,9 +966,9 @@ async function fetchPreviewMetadata(
   }
 
   const impactsResult =
-    impactCategoryIds.length === 0
+    impactRefs.length === 0
       ? { ok: true as const, data: [] }
-      : await fetchImpactMetadata(supabase, impactCategoryIds);
+      : await fetchImpactMetadata(supabase, impactRefs);
   if (!impactsResult.ok) {
     warnings.push({
       code: impactsResult.code,
@@ -1052,7 +1059,7 @@ async function fetchProcessMetadata(
 
 async function fetchImpactMetadata(
   supabase: SupabaseClient,
-  impactCategoryIds: string[],
+  impactRefs: Array<{ impactCategoryId: string; impactVersion: string }>,
 ): Promise<
   | { ok: true; data: LciaResultPackageImpactMetadata[] }
   | {
@@ -1067,8 +1074,8 @@ async function fetchImpactMetadata(
     .schema('public')
     .from('lciamethods')
     .select('id,version,json,json_ordered')
-    .in('id', impactCategoryIds)
-    .order('version', { ascending: false });
+    .in('id', uniqueStrings(impactRefs.map((ref) => ref.impactCategoryId)))
+    .in('version', uniqueStrings(impactRefs.map((ref) => ref.impactVersion)));
 
   if (error) {
     return {
@@ -1080,18 +1087,23 @@ async function fetchImpactMetadata(
     };
   }
 
-  const wantedIds = new Set(impactCategoryIds);
+  const wanted = new Set(
+    impactRefs.map((ref) => processLookupKey(ref.impactCategoryId, ref.impactVersion)),
+  );
   const byId = new Map<string, LciaResultPackageImpactMetadata>();
   for (const row of data ?? []) {
     const record = (isRecord(row) ? row : {}) as Record<string, unknown>;
     const impactCategoryId = stringValue(record.id);
-    if (!impactCategoryId || !wantedIds.has(impactCategoryId) || byId.has(impactCategoryId)) {
+    const impactVersion = stringValue(record.version);
+    const key =
+      impactCategoryId && impactVersion ? processLookupKey(impactCategoryId, impactVersion) : '';
+    if (!wanted.has(key) || byId.has(key)) {
       continue;
     }
     const document = record.json_ordered ?? record.json;
-    byId.set(impactCategoryId, {
-      impactCategoryId,
-      impactVersion: stringValue(record.version),
+    byId.set(key, {
+      impactCategoryId: impactCategoryId!,
+      impactVersion,
       impactName: impactNameFromDocument(document),
       unit: impactUnitFromDocument(document),
     });

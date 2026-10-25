@@ -1796,6 +1796,7 @@ Deno.test(
               {
                 impact_id: 'impact-climate',
                 impact_key: 'climate-change',
+                impact_version: '01.00.000',
                 impact_index: 0,
                 impact_name: 'Climate change',
                 unit: 'kg CO2 eq',
@@ -1832,6 +1833,7 @@ Deno.test(
             },
           ],
           impactCategoryIds: ['impact-climate'],
+          impactRefs: [{ impactCategoryId: 'impact-climate', impactVersion: '01.00.000' }],
         });
         return Promise.resolve({
           ok: true,
@@ -1899,7 +1901,7 @@ Deno.test(
             impactIndex: 0,
             impactName: 'Climate change',
             impactVersion: '01.00.000',
-            unit: 'kg CO2 equivalents',
+            unit: 'kg CO2 eq',
             offset: 0,
             limit: 25,
             returnedCount: 1,
@@ -1918,7 +1920,7 @@ Deno.test(
                 impactIndex: 0,
                 impactName: 'Climate change',
                 impactVersion: '01.00.000',
-                unit: 'kg CO2 equivalents',
+                unit: 'kg CO2 eq',
                 value: 42,
               },
             ],
@@ -1930,7 +1932,7 @@ Deno.test(
               impactIndex: 0,
               impactName: 'Climate change',
               impactVersion: '01.00.000',
-              unit: 'kg CO2 equivalents',
+              unit: 'kg CO2 eq',
             },
           ],
         },
@@ -2296,3 +2298,68 @@ Deno.test('allocation v5 closure RPC preserves exact intent and database rejecti
     if (!result.ok) assertEquals(result.code, 'invalid_closure_link_policy');
   }
 });
+
+Deno.test(
+  'preview metadata query restricts method versions and rejects cross-pair or latest rows',
+  async () => {
+    const methodId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const filters: Array<[string, string[]]> = [];
+    const builder = {
+      in(column: string, values: string[]) {
+        filters.push([column, values]);
+        return this;
+      },
+      then(resolve: (value: unknown) => unknown) {
+        return Promise.resolve(
+          resolve({
+            data: [
+              {
+                id: methodId,
+                version: '02.00.000',
+                json: { description: 'Newest', referenceQuantity: { shortDescription: 'm3' } },
+              },
+              {
+                id: methodId,
+                version: '01.00.000',
+                json: { description: 'Exact', referenceQuantity: { shortDescription: 'kg' } },
+              },
+            ],
+            error: null,
+          }),
+        );
+      },
+    };
+    const service = {
+      schema(schema: string) {
+        assertEquals(schema, 'public');
+        return {
+          from(table: string) {
+            assertEquals(table, 'lciamethods');
+            return {
+              select(_columns: string) {
+                return builder;
+              },
+            };
+          },
+        };
+      },
+    };
+    const repo = createDataProductCommandRepository(
+      new FakeRpcSupabase({ data: null, error: null }) as never,
+      service as never,
+    );
+    const result = await repo.fetchPreviewMetadata({
+      processes: [],
+      impactCategoryIds: [methodId],
+      impactRefs: [{ impactCategoryId: methodId, impactVersion: '01.00.000' }],
+    });
+    assert(result.ok);
+    assertEquals(filters, [
+      ['id', [methodId]],
+      ['version', ['01.00.000']],
+    ]);
+    assertEquals(result.data.impacts, [
+      { impactCategoryId: methodId, impactVersion: '01.00.000', impactName: 'Exact', unit: 'kg' },
+    ]);
+  },
+);

@@ -1,3 +1,7 @@
+import {
+  lciaAvailabilityMatches,
+  parseSnapshotLciaAvailability,
+} from '../../lca_category_availability.ts';
 import { z } from 'zod';
 
 import type { ActorContext } from '../../command_runtime/actor_context.ts';
@@ -5,6 +9,7 @@ import { buildCommandAuditPayload } from '../../command_runtime/audit_log.ts';
 import type { CommandParseResult } from '../../command_runtime/command.ts';
 import {
   ALL_UNIT_QUERY_V2_FORMAT,
+  ALL_UNIT_QUERY_V3_FORMAT,
   parseAllUnitQueryArtifact,
   readImpactColumn,
 } from '../../lca_all_unit_query_artifact.ts';
@@ -348,7 +353,11 @@ async function enrichPackagePreview(
   }
 
   if (queryDescriptor) {
-    if (queryDescriptor.artifactFormat === ALL_UNIT_QUERY_V2_FORMAT) {
+    if (
+      [ALL_UNIT_QUERY_V2_FORMAT, ALL_UNIT_QUERY_V3_FORMAT].includes(
+        queryDescriptor.artifactFormat ?? '',
+      )
+    ) {
       const verified = await fetchVerifiedQueryArtifact(repository, queryDescriptor);
       if (verified.ok) {
         rawQueryArtifact = verified.data;
@@ -379,7 +388,10 @@ async function enrichPackagePreview(
     snapshotIndex,
     queryArtifact,
   });
-  const previewMetadataRefs = previewMetadataRefsFromProjection(projection);
+  const previewMetadataRefs = previewMetadataRefsFromProjection(
+    projection,
+    selectPreviewImpact(data, request, projection.impactOptions),
+  );
   if (
     previewMetadataRefs.processes.length > 0 ||
     previewMetadataRefs.impactCategoryIds.length > 0
@@ -416,20 +428,34 @@ async function enrichPackagePreview(
   if (
     snapshotIndex &&
     rawQueryArtifact &&
-    queryDescriptor?.artifactFormat === ALL_UNIT_QUERY_V2_FORMAT
+    queryDescriptor &&
+    [ALL_UNIT_QUERY_V2_FORMAT, ALL_UNIT_QUERY_V3_FORMAT].includes(
+      queryDescriptor.artifactFormat ?? '',
+    )
   ) {
     const impacts = [...snapshotIndex.impact_map].sort(
       (left, right) => left.impact_index - right.impact_index,
     );
     const parsed = parseAllUnitQueryArtifact(rawQueryArtifact, {
-      expectedFormat: queryDescriptor.artifactFormat,
+      expectedFormat: queryDescriptor.artifactFormat!,
       snapshotId: snapshotIndex.snapshot_id,
       processCount: snapshotIndex.process_count,
       impacts,
     });
+    const snapshotAvailability = parseSnapshotLciaAvailability(
+      snapshotIndex.lcia_applicability,
+      impacts,
+    );
     const selectedImpact = selectPreviewImpact(data, request, projection.impactOptions);
     if (!parsed.ok) {
       warnings.push({ code: parsed.error, detail: parsed.detail });
+    } else if (
+      parsed.data.kind === 'v3' &&
+      (!snapshotAvailability ||
+        !parsed.data.lciaAvailability ||
+        !lciaAvailabilityMatches(snapshotAvailability, parsed.data.lciaAvailability))
+    ) {
+      warnings.push({ code: 'query_artifact_lcia_availability_mismatch' });
     } else if (selectedImpact) {
       const processIndices = projection.detailPage.rows
         .map((row) => row.processIndex)
@@ -457,6 +483,17 @@ async function enrichPackagePreview(
         });
       } else {
         warnings.push({ code: values.error, detail: values.detail });
+        if (values.error === 'lcia_category_unavailable')
+          projection.detailPage = {
+            status: 'unavailable',
+            reason: [values.error, values.detail].filter(Boolean).join(':'),
+            offset: projection.detailPage.offset,
+            limit: projection.detailPage.limit,
+            returnedCount: projection.detailPage.rows.length,
+            totalCount: projection.detailPage.totalCount,
+            omittedInputCount: projection.detailPage.omittedInputCount,
+            rows: projection.detailPage.rows.map((row) => ({ ...row, value: null })),
+          };
       }
     }
   }

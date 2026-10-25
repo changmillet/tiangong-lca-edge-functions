@@ -23,9 +23,9 @@ checkPaths:
   - supabase/config.toml
   - supabase/.env.example
   - test.example.http
-lastReviewedAt: '2026-10-25'
-lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
-lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
+lastReviewedAt: 2026-10-25
+lastReviewedCommit: e13d8c2aee23fc58241b64053007bbcdb14d8524
+lastReviewedNote: 'Reviewed Worker #339 / PR #340 companion against base e13d8c2: current applicability admission, exact category availability, nullable partial LCIA, immutable query/bundle validation and consumer rejection paths; local synthetic proof remains separate from native acceptance and deployment.'
 ---
 
 # TianGong-LCA-Edge-Functions
@@ -320,6 +320,8 @@ See `test.example.http` for local and remote examples. Treat it as a supporting 
 After raw-byte HMAC, the handler constant-time matches the dedicated current-project `PORTAL_R0_SUPABASE_PUBLISHABLE_KEY`, rejects Authorization and Cookie, registers nonce with `SET NX EX 120`, and invokes the reviewed atomic Lua budget/concurrency primitive under `portal:r0:<fixture>:v1`. Only then does it parse the one-field request. Success returns only `{"schemaVersion":"portal.r0-hmac-redis-receipt.v1","ok":true}`. Failures return the same schema with a fixed code and no secret, nonce, body, Redis key/value, credential, locator, or internal error.
 
 The endpoint has no database, RPC, model, provider, repository, storage, cache, business payload, or logging path. Generic-only or retained Portal configuration, replay, Redis outage/timeout/malformed reply, budget/concurrency contention, and lease-cleanup failure all fail closed. Current+previous rotation is allowed only for the short fixture window. After the recorded Preview proof, delete the endpoint, exact R0 fixture keys, and temporary Preview identities/copies while preserving the shared Upstash database and Dev/Main namespaces.
+
+Private LCA results distinguish available categories from unavailable applicability. The current all-unit query preserves unavailable values as null with reasons, and selected unavailable categories cannot be compared, ranked or traversed. Partial Calculation Bundles retain LCI and valid LCIA; they do not establish complete LCIA or publication readiness. Producer, Worker, Edge and frontend compatibility must be delivered together before the policy is activated; see `docs/agents/repo-architecture.md` for the versioned contract.
 
 ### Portal signed public LCIA contract
 

@@ -244,3 +244,176 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new Uint8Array(bytes));
   return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, '0')).join('');
 }
+
+Deno.test(
+  'all-unit query v3 preserves unavailable categories as null and never ranks unknown zeros',
+  async () => {
+    const { document, bytes } = await partialDocument();
+    const parsed = parseAllUnitQueryArtifact(document, {
+      expectedFormat: 'all-unit-query:v3',
+      snapshotId: SNAPSHOT_ID,
+      processCount: 2,
+      impacts,
+    });
+    assert(parsed.ok);
+    let reads = 0;
+    const fetcher = () => {
+      reads += 1;
+      return Promise.resolve({ ok: true as const, data: bytes });
+    };
+    const row = await readProcessImpactRow(parsed.data, impacts, 0, fetcher);
+    assertEquals(row, { ok: true, data: [0, null] });
+    const available = await readImpactColumn(parsed.data, impacts, 0, [0, 1], fetcher);
+    assert(available.ok);
+    assertEquals([...available.data.values()], [0, -3]);
+    const unavailable = await readImpactColumn(parsed.data, impacts, 1, null, fetcher);
+    assertEquals(unavailable, {
+      ok: false,
+      error: 'lcia_category_unavailable',
+      detail: 'lcia_factor_location_semantics_unresolved',
+    });
+    assertEquals(reads, 2);
+  },
+);
+
+Deno.test(
+  'all-unit query v3 rejects malformed availability and exact source version drift',
+  async () => {
+    const { document } = await partialDocument();
+    for (const patch of [
+      { lciaAvailability: null },
+      { lciaAvailability: { ...document.lciaAvailability, completeness: 'complete' } },
+      {
+        lciaAvailability: {
+          ...document.lciaAvailability,
+          categories: document.lciaAvailability.categories.map((row) => ({
+            ...row,
+            method_version: '99.00.000',
+          })),
+        },
+      },
+      {
+        lciaChunks: document.lciaChunks.map((chunk) => ({
+          ...chunk,
+          schemaVersion: 'tiangong.calculation-bundle.lcia.v1',
+        })),
+      },
+    ]) {
+      const parsed = parseAllUnitQueryArtifact(
+        { ...document, ...patch },
+        { expectedFormat: 'all-unit-query:v3', snapshotId: SNAPSHOT_ID, processCount: 2, impacts },
+      );
+      assertEquals(parsed.ok, false);
+    }
+  },
+);
+
+Deno.test(
+  'all-unit query v3 binds every null/status/reason to the immutable availability',
+  async () => {
+    for (const changes of [
+      { meanAmount: 0 },
+      { status: 'available' },
+      { reasons: [] },
+      { reasons: ['a different reason'] },
+    ]) {
+      const { document, bytes } = await partialDocument(changes);
+      const parsed = parseAllUnitQueryArtifact(document, {
+        expectedFormat: 'all-unit-query:v3',
+        snapshotId: SNAPSHOT_ID,
+        processCount: 2,
+        impacts,
+      });
+      assert(parsed.ok);
+      const row = await readProcessImpactRow(parsed.data, impacts, 0, () =>
+        Promise.resolve({ ok: true, data: bytes }),
+      );
+      assertEquals(row.ok, false);
+    }
+  },
+);
+
+async function partialDocument(changes: Record<string, unknown> = {}) {
+  const lciaAvailability = {
+    schema_version: 'lcia.category-availability.v1',
+    policy_version: 'lcia.applicability.source-bound.v2',
+    completeness: 'partial',
+    categories: impacts.map((impact, index) => ({
+      impact_index: index,
+      method_id: impact.impact_id,
+      method_version: impact.impact_version,
+      status: index === 0 ? 'available' : 'unavailable',
+      reasons: index === 0 ? [] : ['lcia_factor_location_semantics_unresolved'],
+    })),
+  };
+  const records = [0, 1].flatMap((processIndex) =>
+    impacts.map((impact, index) => ({
+      processIndex,
+      method: { id: impact.impact_id, version: impact.impact_version },
+      meanAmount: index === 0 ? -3 * processIndex : null,
+      status: index === 0 ? 'available' : 'unavailable',
+      reasons: index === 0 ? [] : ['lcia_factor_location_semantics_unresolved'],
+      ...(index === 1 ? changes : {}),
+    })),
+  );
+  const bytes = await gzip(records.map((value) => JSON.stringify(value)).join('\n') + '\n');
+  const original = v2Document(bytes, await sha256Hex(bytes));
+  const document = {
+    ...original,
+    version: 3,
+    format: 'all-unit-query:v3',
+    lciaAvailability,
+    calculationBundle: {
+      ...original.calculationBundle,
+      schemaVersion: 'tiangong.calculation-bundle.v3',
+    },
+    lciaChunks: original.lciaChunks.map((chunk) => ({
+      ...chunk,
+      schemaVersion: 'tiangong.calculation-bundle.lcia.v2',
+    })),
+  };
+  return { document, bytes };
+}
+
+Deno.test(
+  'current complete query v3 binds availability while retaining numeric v2 bundle compatibility',
+  async () => {
+    const records = [
+      record(0, METHOD_A, '01.00.000', 0),
+      record(0, METHOD_B, '02.00.000', -2),
+      record(1, METHOD_A, '01.00.000', 3),
+      record(1, METHOD_B, '02.00.000', 4),
+    ];
+    const bytes = await gzip(records.map((value) => JSON.stringify(value)).join('\n') + '\n');
+    const document = {
+      ...v2Document(bytes, await sha256Hex(bytes)),
+      version: 3,
+      format: 'all-unit-query:v3',
+      lciaAvailability: {
+        schema_version: 'lcia.category-availability.v1',
+        policy_version: 'lcia.applicability.source-bound.v2',
+        completeness: 'complete',
+        categories: impacts.map((impact) => ({
+          impact_index: impact.impact_index,
+          method_id: impact.impact_id,
+          method_version: impact.impact_version,
+          status: 'available',
+          reasons: [],
+        })),
+      },
+    };
+    const parsed = parseAllUnitQueryArtifact(document, {
+      expectedFormat: document.format,
+      snapshotId: SNAPSHOT_ID,
+      processCount: 2,
+      impacts,
+    });
+    assert(parsed.ok);
+    assertEquals(
+      await readProcessImpactRow(parsed.data, impacts, 0, () =>
+        Promise.resolve({ ok: true, data: bytes }),
+      ),
+      { ok: true, data: [0, -2] },
+    );
+  },
+);
