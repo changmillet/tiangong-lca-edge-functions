@@ -39,10 +39,10 @@
         }
       ],
       "completeness": "partial",
-      "policy_version": "lcia.applicability.source-bound.v2",
+      "policy_version": "lcia.applicability.source-bound.v3",
       "schema_version": "lcia.category-availability.v1"
     },
-    "policy_version": "lcia.applicability.source-bound.v2",
+    "policy_version": "lcia.applicability.source-bound.v3",
     "schema_version": "lcia.applicability.evidence.v2"
   },
   "process_count": 1,

@@ -168,7 +168,7 @@ Do not infer routine workflow from GitHub default-branch UI alone.
 
 ## Hard Boundaries
 
-- Current LCIA calculation/cache admission requires Worker applicability policy v2 and category availability; partial private results preserve unavailable values as null with reasons. Complete publication remains Database-owned. Read `docs/agents/repo-architecture.md` under LCIA applicability before changing these result wires.
+- Current LCIA calculation/cache admission requires Worker applicability policy v3 and category availability; partial private results preserve unavailable values as null with reasons. Complete publication remains Database-owned. Read `docs/agents/repo-architecture.md` under LCIA applicability before changing these result wires.
 
 - Portal V3 requires a canonical HMAC-bound `allowedBrandCodes` set and uses only scoped Database V3; LCIA request V2 similarly uses scoped LCIA V2 and rechecks visibility/publication on every cache hit. There is no unscoped fallback for either wire.
 - Portal V2 is an explicit wire-version opt-in on the same signed endpoint. It calls only the additive public V2 Database API, validates best-version groups plus every exact member, and uses opaque query-bound continuation. V1 callers retain their old public API contract. Never relabel a V1 response as V2.

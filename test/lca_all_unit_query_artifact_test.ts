@@ -336,7 +336,7 @@ Deno.test(
 async function partialDocument(changes: Record<string, unknown> = {}) {
   const lciaAvailability = {
     schema_version: 'lcia.category-availability.v1',
-    policy_version: 'lcia.applicability.source-bound.v2',
+    policy_version: 'lcia.applicability.source-bound.v3',
     completeness: 'partial',
     categories: impacts.map((impact, index) => ({
       impact_index: index,
@@ -391,7 +391,7 @@ Deno.test(
       format: 'all-unit-query:v3',
       lciaAvailability: {
         schema_version: 'lcia.category-availability.v1',
-        policy_version: 'lcia.applicability.source-bound.v2',
+        policy_version: 'lcia.applicability.source-bound.v3',
         completeness: 'complete',
         categories: impacts.map((impact) => ({
           impact_index: impact.impact_index,

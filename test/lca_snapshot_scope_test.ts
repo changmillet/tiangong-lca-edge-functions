@@ -314,6 +314,10 @@ Deno.test('candidate evidence decision fails closed before cache or enqueue', ()
       { lcia_applicability_policy_version: 'old' },
       'snapshot_lcia_applicability_policy_version_not_current',
     ],
+    [
+      { lcia_applicability_policy_version: 'lcia.applicability.source-bound.v2' },
+      'snapshot_lcia_applicability_policy_version_not_current',
+    ],
     [{ lcia_availability: undefined }, 'snapshot_lcia_availability_invalid'],
     [
       { lcia_availability: { ...availabilityFixture(), completeness: 'complete' } },

@@ -617,10 +617,10 @@ The retired review-submit Gate, coordinator, and job endpoints are no longer dep
   - `GET`: `/functions/v1/lca_results/{resultId}` or `?result_id=...`
   - `POST`: body `{ "result_id": "<uuid>" }`
 - `lca_query_results`: `POST` only.
-  - reads both the historical inline `all-unit-query:v1` artifact and the chunked `all-unit-query:v2` index emitted by current workers; callers do not select the storage format
-  - v2 reads verify the persisted index byte size and SHA-256, Calculation Bundle binding, safe chunk paths, contiguous process coverage, per-chunk byte size/SHA-256, gzip decoding, record counts, and exact process/method order before returning values
+  - current calculations require the chunked `all-unit-query:v3` index and its exact snapshot-bound category availability receipt; callers do not select the storage format
+  - chunked reads verify the persisted index byte size and SHA-256, Calculation Bundle binding, safe chunk paths, contiguous process coverage, per-chunk byte size/SHA-256, gzip decoding, record counts, and exact process/method order before returning values
   - row queries download only the chunks covering the requested processes; hotspot queries stream the selected impact column across chunks and do not reconstruct or persist the complete matrix in Edge
-- Data Product package preview uses the same verified `all-unit-query:v1` / `all-unit-query:v2` reader. For v2 it reads only the LCIA chunks covering the requested page and selected impact category, instead of requiring the removed inline `h_matrix`.
+- Data Product package preview retains historical `all-unit-query:v1` / `all-unit-query:v2` readers and accepts current `all-unit-query:v3` evidence. Chunked preview reads only the LCIA chunks covering the requested page and selected impact category. Unavailable categories retain null plus reasons, and optional metadata preserves the frozen method version and unit. Private partial readiness grants no Portal projection or complete publication authority; see the LCIA applicability section in `docs/agents/repo-architecture.md`.
 
 ## LCI/LCIA Release Function Call Patterns
 

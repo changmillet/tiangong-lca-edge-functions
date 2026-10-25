@@ -1,5 +1,5 @@
 /** Worker-owned applicability policy and complete ordered category availability wire. */
-export const LCIA_APPLICABILITY_POLICY_VERSION = 'lcia.applicability.source-bound.v2';
+export const LCIA_APPLICABILITY_POLICY_VERSION = 'lcia.applicability.source-bound.v3';
 export const LCIA_AVAILABILITY_SCHEMA_VERSION = 'lcia.category-availability.v1';
 
 export type LciaCategoryAvailability = {

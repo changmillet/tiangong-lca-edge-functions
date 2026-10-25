@@ -1,3 +1,5 @@
+# Worker #339 policy v3 review: existing request payloads are unchanged; retired v2
+# calculation/cache evidence is rejected before reuse. No request was executed.
 # Worker #339 / PR #340 compatibility: existing LCA request/auth examples remain valid.
 # Current responses preserve unavailable LCIA categories as null plus reasons; selected
 # unavailable categories return lcia_category_unavailable. No request was executed.

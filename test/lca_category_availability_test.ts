@@ -20,6 +20,7 @@ Deno.test(
     for (const changed of [
       { ...receipt, completeness: 'complete' },
       { ...receipt, policy_version: 'lcia.applicability.source-bound.v1' },
+      { ...receipt, policy_version: 'lcia.applicability.source-bound.v2' },
       { ...receipt, categories: receipt.categories.slice(0, 1) },
       { ...receipt, categories: [...receipt.categories].reverse() },
       {

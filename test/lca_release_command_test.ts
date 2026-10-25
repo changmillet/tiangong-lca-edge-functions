@@ -948,7 +948,7 @@ Deno.test(
       const manifestObjectKey = `calculation-bundles/${RELEASE_RUN_ID}/${bundleContentHash}/calculation-bundle.json`;
       const lciaAvailability = {
         schema_version: 'lcia.category-availability.v1',
-        policy_version: 'lcia.applicability.source-bound.v2',
+        policy_version: 'lcia.applicability.source-bound.v3',
         completeness: valid ? 'unavailable' : 'complete',
         categories: [
           {
