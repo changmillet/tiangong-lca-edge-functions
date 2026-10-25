@@ -36,8 +36,8 @@ checkPaths:
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
 lastReviewedAt: 2026-10-25
-lastReviewedCommit: e13d8c2aee23fc58241b64053007bbcdb14d8524
-lastReviewedNote: 'Reviewed Worker #339 / PR #340 companion against base e13d8c2: current applicability admission, exact category availability, nullable partial LCIA, immutable query/bundle validation and consumer rejection paths; local synthetic proof remains separate from native acceptance and deployment.'
+lastReviewedCommit: fd3926cc1ce6c1f8415c4a17f6cc033d6faa1e30
+lastReviewedNote: 'Reviewed policy v3 admission and retired v2 rejection against fd3926c; current nullable query/bundle wires, frozen preview metadata and byte-exact native Worker fixture remain aligned. Source consumer proof does not establish scientific or deployment acceptance.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
