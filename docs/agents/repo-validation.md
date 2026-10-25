@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-19
-lastReviewedCommit: 0a242b956e9fd6eaa24cf5217578560c840bf1b6
-lastReviewedNote: 'Edge #498: reviewed exact current-serve Kong generation proof and narrow automatic canonical CI coverage for the actual synthetic-stack inputs, with independent positive/removal/negative controls. Jobs, events, privileges, credentials, refs, product/dependency pins and functional assertions remain unchanged; new hosted qualification is required.'
+lastReviewedAt: '2026-10-25'
+lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
+lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -121,7 +121,7 @@ Sources: [upstream Deno fetcher](https://github.com/dependabot/dependabot-core/b
 | LCA solve, queue, result, or scope helpers | `pnpm lint`; `pnpm check`; targeted `deno check` on changed `lca_*` files and `_shared/lca_*` helpers; run `test/lca_snapshot_capabilities_test.ts`, `test/lca_process_scope_test.ts`, and neighboring scope/queue tests. All-unit query artifact reader changes must run `test/lca_all_unit_query_artifact_test.ts`. Static LCIA contract changes must run `test/lca_static_cache_bundle_contract_test.ts`, `test/lca_snapshot_scope_test.ts`, `test/lca_snapshot_scope_db_test.ts`, `test/lca_snapshot_build_queue_test.ts`, and `test/lca_all_unit_solve_queue_test.ts` with `--allow-read` so raw-manifest hash parity and adversarial locator/evidence drift are covered. For worker_jobs cutover changes also run `test/worker_jobs_cutover_test.ts` and `test/worker_jobs_test.ts` | run `scripts/lca_submit_poll_fetch.sh` when the task explicitly touches the submit, poll, or fetch path; otherwise record why that proof is deferred | Prove omitted/blank `scope` resolves to `full_library`, `data_product` remains distinct, and arbitrary environment/cache labels fail before snapshot lookup or enqueue. `worker_jobs` is the default enqueue path; `LCA_WORKER_JOBS_ENABLED=false` must fail closed instead of using legacy queue fallback. Named private scope rejects old combined-scope hashes and v1 database/union LCIA evidence. Query readers retain historical v1 support and validate v2 index/chunk integrity before returning numeric values. The static source base URL is worker-trusted configuration, never a client field. Domain rows/cache remain result metadata, not task fact. Missing worker_jobs DB-side truth is validated in `database-engine`, not here. |
 | TIDAS package import, export, or job paths | `pnpm lint`; `pnpm check`; targeted `deno check` on changed package files and `_shared/tidas_package.ts`; run `deno test --allow-env --config supabase/functions/deno.json test/tidas_package_test.ts test/tidas_package_api_test.ts` when package enqueue behavior changes | use the relevant requests in `test.example.http`; if auth or payload shaping changed, run a local or remote smoke path | Verified Supabase JWT coverage matters for these routes; opaque legacy bearers must fail. `worker_jobs` is the default enqueue path; `TIDAS_PACKAGE_WORKER_JOBS_ENABLED=false` must fail closed instead of using legacy queue fallback. Package domain rows/cache/artifacts stay retained metadata, not task fact. |
 | Deploy script, import/dependency graph, `package.json`, `supabase/config.toml`, or PR contract files | `pnpm lint`; `pnpm outdated --format json`; exact-Deno `deno outdated --latest`; inspect branch, project-ref, import-map, direct imports, and deploy flags against `AGENTS.md`/`.docpact/config.yaml`; run `pnpm check` when runtime inventory or imports changed | run targeted OpenAI, Supabase, auth, and both Redis-provider tests for their graph changes; if the task includes a real deploy, record the environment and function names | Remote deploy proof is not implied by local lint or type-check. Scripted deploys resolve imports through `supabase/functions/deno.json`; Functions JS type imports must use the mapped alias, and any direct JSR/URL import must carry the same reviewed version. |
-| Auth probe tooling | `pnpm lint`; `node scripts/probe-functions-auth.cjs --help`; `pnpm probe:auth --dry-run` | run `pnpm probe:auth --remote` or `--local` when the task explicitly includes live probe validation | Dry-run is the safe default when you only changed classification or selection logic. |
+| Auth probe tooling | `pnpm lint`; `node --test scripts/probe-functions-auth.test.cjs`; `node scripts/probe-functions-auth.cjs --help`; `pnpm probe:auth --dry-run` | run `pnpm probe:auth --remote` or `--local` when the task explicitly includes live probe validation | Use the real CLI with mocked fetch to prove copied examples and implicit targets stay loopback or fail before dispatch; explicit local/remote targets work; missing, duplicate, conflicting and unsafe targets cannot leak credentials or fall through. Redirect responses cannot dispatch to an unselected destination. Dry-run inventories without network. |
 | Repo tests only | `pnpm lint`; `pnpm check`; targeted `deno check --config supabase/functions/deno.json <changed-test-file>` | run neighboring tests that cover the same shared module or function family | This repo keeps Deno tests in `test/**`, not under each function folder. |
 | Repo docs or docpact config only | `scripts/docpact validate-config --root . --strict`; `scripts/docpact lint --root . --worktree --mode enforce` | perform scenario-based route checks for the affected intent surface | Refresh review metadata when governed docs change without code changes. |
 
@@ -179,14 +179,14 @@ Facts that matter:
 - runtime auth still happens inside functions, primarily through `supabase/functions/_shared/auth.ts`
 - ordinary Supabase JWT routes use claims/JWKS by default; only `identity_login_sync` uses explicit `fresh_user`
 - generic auth Redis is removed; `_shared/redis_client.ts` is Portal-only and must read only its explicit `PORTAL_*`/`PORTAL_R0_*` configuration
-- `scripts/probe-functions-auth.cjs` is the fastest way to separate gateway rejection from runtime-auth rejection
+- `scripts/probe-functions-auth.cjs` is the fastest way to separate gateway rejection from runtime-auth rejection; implicit targets must be loopback, and remote probes require an explicit `--remote` or `--base-url` selection. A missing selected endpoint cannot fall through to another target.
 
 Useful low-risk commands:
 
 ```bash
 node scripts/probe-functions-auth.cjs --help
 pnpm probe:auth --dry-run
-pnpm probe:auth --remote --only lca_
+node --test scripts/probe-functions-auth.test.cjs
 ```
 
 ## Docpact Governance Notes
