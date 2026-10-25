@@ -35,8 +35,8 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: '2026-10-25'
-lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
+lastReviewedAt: 2026-10-25
+lastReviewedCommit: e13d8c2aee23fc58241b64053007bbcdb14d8524
 lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
 related:
   - ../../AGENTS.md
@@ -393,3 +393,9 @@ LCIA request V2 requires the same signed `allowedBrandCodes`; it calls only `api
 LCIA replay coverage (Worker #320 / Edge #480): new build requests use coverage contract v3 (`snapshot_replay`) and a v3 request identity. Consumers accept matrix v2 only with `lcia-coverage-replay-snapshot:v1`, retaining all source, identity, count and scope checks; matrix v1 still requires legacy JSONL v2. A replay locator identifies private snapshot metadata, never a browser download. Snapshot enqueue accepts only `queued`/`in_progress` as pollable; Database failure/blockage and unexpected modes terminate polling. Deploy compatible consumers and Worker before admitting v3 requests.
 
 Independent calculation exports (Edge #483 / Worker #320) use `request_calculation_export` and `get_calculation_export` on `app_lca_release_commands`. Both recheck the actor-authorized completed package and call the service-only Database export facade with server-authenticated actor identity. Omitted format selects Parquet. Read mode never enqueues. Completed results must match package/job/format/Bundle/manifest bindings and bounded role/name/media/size/count tuples; sign at most 20 members plus the manifest per request. CSV members are independently gzipped, audit members reuse exact canonical paths, and response metadata removes raw locators. Failed/cancelled/blocked export states remain terminal and never change numerical readiness.
+
+## Calculation identity and snapshot reuse
+
+The Worker owns calculation descriptor bytes and their SHA-256 identity. Database #873 stores the immutable descriptor, activates an identity only through a service-only compare-and-set operation, and projects `calculationCurrent` on `svc_lca_snapshot_candidates`. Edge requires the literal boolean `true` before returning a snapshot to a new solve, result-query or contribution request, including explicit IDs and automatic lookup. A missing projection is incompatible; deploy Database #873 before this consumer.
+
+Edge does not interpret descriptor fields or maintain an LCIA algorithm version. The existing numerical input eligibility and actor checks remain separate. Changing default-factor selection requires a new Worker descriptor and explicit activation, not another Edge constant or scanner migration. Historical artifact/package reads remain independent of new-computation admission. Exchange location and factor coverage do not participate in this compatibility decision.
