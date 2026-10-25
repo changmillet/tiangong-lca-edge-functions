@@ -274,6 +274,7 @@ Deno.test('candidate evidence decision fails closed before cache or enqueue', ()
   const candidate = (processFilter: unknown, artifactUrl = 's3://snapshot/index.json') => ({
     processFilter,
     artifact: { artifactUrl },
+    calculationCurrent: true,
   });
   const current = {
     all_states: false,
@@ -900,5 +901,32 @@ Deno.test(
     matrix.schema_version = 'lcia.method_factor_coverage.matrix.v2';
     matrix.uncharacterized_evidence!.record_count -= 1;
     assertEquals(validateLcaCalculationEvidence(evidence, scope.manifest_sha256).ok, false);
+  },
+);
+
+Deno.test(
+  'new computation requires server compatibility independently of numerical eligibility',
+  () => {
+    for (const fingerprint of ['opaque-first-implementation', 'unrelated-next-implementation']) {
+      const candidate = {
+        processFilter: {
+          all_states: false,
+          process_states: [100],
+          numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION,
+          calculation_fingerprint: fingerprint,
+        },
+        artifact: { artifactUrl: 's3://immutable-history' },
+      };
+      assertEquals(
+        evaluateSnapshotEvidenceForNewCalculation({ ...candidate, calculationCurrent: true }),
+        { ok: true },
+      );
+      for (const value of [false, undefined, null, 'true']) {
+        assertEquals(
+          evaluateSnapshotEvidenceForNewCalculation({ ...candidate, calculationCurrent: value }),
+          { ok: false, status: 409, error: 'snapshot_calculation_contract_not_current' },
+        );
+      }
+    }
   },
 );

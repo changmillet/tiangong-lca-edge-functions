@@ -1,7 +1,7 @@
 version: 1
 layout: repo
 lastReviewedAt: '2026-10-25'
-lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
+lastReviewedCommit: 'e13d8c2aee23fc58241b64053007bbcdb14d8524'
 lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
 
 # Keep deterministic governance facts here.

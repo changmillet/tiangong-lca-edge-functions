@@ -434,6 +434,7 @@ export type SnapshotProcessFilterRejection =
   | 'snapshot_process_state_not_numerical';
 
 export type SnapshotEvidenceRejection =
+  | 'snapshot_calculation_contract_not_current'
   | 'snapshot_numerical_policy_version_missing'
   | 'snapshot_numerical_policy_version_not_current'
   | SnapshotProcessFilterRejection;
@@ -497,7 +498,10 @@ export type SnapshotEvidenceDecision =
  * `snapshot_not_ready` rather than as a policy failure.
  */
 export function evaluateSnapshotEvidenceForNewCalculation(
-  candidate: { processFilter?: unknown; artifact?: unknown } | null | undefined,
+  candidate:
+    | { processFilter?: unknown; artifact?: unknown; calculationCurrent?: unknown }
+    | null
+    | undefined,
 ): SnapshotEvidenceDecision {
   if (!candidate) {
     return { ok: false, status: 404, error: 'snapshot_not_ready' };
@@ -515,6 +519,11 @@ export function evaluateSnapshotEvidenceForNewCalculation(
   const rejection = rejectNonCurrentSnapshotEvidence(candidate.processFilter);
   if (rejection) {
     return { ok: false, status: 409, error: rejection };
+  }
+  // This is a stored candidate projection, never a request-supplied flag. Database binds the
+  // opaque Worker identity; algorithm upgrades need no Edge constant or scanner-version change.
+  if (candidate.calculationCurrent !== true) {
+    return { ok: false, status: 409, error: 'snapshot_calculation_contract_not_current' };
   }
   return { ok: true };
 }
