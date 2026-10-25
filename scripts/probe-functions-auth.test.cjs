@@ -178,3 +178,18 @@ test('probe observes a redirect without following an unselected remote destinati
   assert.equal(result.requests[0].redirect, 'manual');
   assert.match(result.stdout, /302\/reachable_other_client_error/);
 });
+
+test('unknown and malformed numeric arguments do not echo private values', (t) => {
+  const privateValue = 'synthetic-private-argument';
+  for (const args of [
+    [`--base-url=https://user:${privateValue}@remote.example.invalid`],
+    [privateValue],
+    ['--timeout-ms', privateValue],
+    ['--concurrency', privateValue],
+  ]) {
+    const result = cli(t, args);
+    assert.equal(result.status, 1);
+    assert.deepEqual(result.requests, []);
+    assert.ok(!`${result.stdout}${result.stderr}`.includes(privateValue));
+  }
+});

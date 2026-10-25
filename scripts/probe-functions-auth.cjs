@@ -161,7 +161,7 @@ function parseArgs(argv) {
       index += 1;
       options.jsonOut = argv[index];
     } else {
-      console.error(`Unknown argument: ${argument}`);
+      console.error('Unknown argument. Run --help for supported options.');
       options.help = true;
       process.exitCode = 1;
       return options;
@@ -178,7 +178,7 @@ function parseArgs(argv) {
 function parsePositiveInt(rawValue, flagName) {
   const parsed = Number.parseInt(rawValue ?? '', 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`${flagName} expects a positive integer, got: ${rawValue}`);
+    throw new Error(`${flagName} expects a positive integer.`);
   }
   return parsed;
 }
