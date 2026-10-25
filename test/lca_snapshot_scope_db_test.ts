@@ -11,7 +11,7 @@ import {
 } from '../supabase/functions/_shared/lca_snapshot_scope_db.ts';
 
 type MockState = {
-  row: { process_filter: unknown } | null;
+  row: { process_filter: unknown; calculationCurrent?: boolean } | null;
   error: { code: string; message: string } | null;
   snapshotIds: unknown[];
 };
@@ -37,6 +37,7 @@ function createSupabaseMock(state: MockState) {
                   processFilter: state.row.process_filter,
                   createdAt: '2026-08-07T00:00:00Z',
                   isActive: true,
+                  calculationCurrent: state.row.calculationCurrent ?? true,
                   artifact: { artifactUrl: 's3://snapshot' },
                 },
               ]
@@ -311,3 +312,31 @@ Deno.test('latest-snapshot fallback rejects a candidate without a ready artifact
     { ok: false, error: 'snapshot_not_ready', status: 404 },
   );
 });
+
+Deno.test(
+  'both explicit and automatic lookups reject retired computation before exposing a candidate',
+  async () => {
+    const state: MockState = {
+      row: {
+        process_filter: {
+          all_states: false,
+          process_states: [100],
+          numerical_policy_version: NUMERICAL_SNAPSHOT_POLICY_VERSION,
+        },
+        calculationCurrent: false,
+      },
+      error: null,
+      snapshotIds: [],
+    };
+    const client = createSupabaseMock(state) as never;
+    assertEquals(
+      await verifySnapshotEvidenceForNewCalculation(client, { snapshotId: 'historical' }),
+      { ok: false, status: 409, error: 'snapshot_calculation_contract_not_current' },
+    );
+    assertEquals(await resolveLatestSnapshotForNewCalculation(client, { scope: 'full_library' }), {
+      ok: false,
+      status: 409,
+      error: 'snapshot_calculation_contract_not_current',
+    });
+  },
+);

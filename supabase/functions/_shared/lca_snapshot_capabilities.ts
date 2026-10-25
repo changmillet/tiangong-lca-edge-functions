@@ -21,6 +21,8 @@ export type LcaSnapshotCandidate = {
   snapshotId: string;
   scope: string;
   processFilter: unknown;
+  /** Database compares opaque Worker-owned identities; Edge owns no algorithm revision. */
+  calculationCurrent?: boolean;
   sourceHash?: string;
   createdAt: string;
   isActive: boolean;
