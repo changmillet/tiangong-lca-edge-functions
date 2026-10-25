@@ -35,7 +35,7 @@ async function main() {
   const baseUrl = resolveBaseUrl(options);
   if (!options.dryRun && !baseUrl) {
     console.error(
-      'Missing base URL. Provide --base-url, --remote, --local, or set EDGE_BASE_URL / REMOTE_ENDPOINT / LOCAL_ENDPOINT.',
+      'Missing local base URL. Set LOCAL_ENDPOINT, or explicitly select --remote with REMOTE_ENDPOINT or --base-url <url>.',
     );
     process.exitCode = 1;
     return;
@@ -122,6 +122,8 @@ function parseArgs(argv) {
     help: false,
   };
 
+  let targetSelections = 0;
+
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--help' || argument === '-h') {
@@ -133,12 +135,19 @@ function parseArgs(argv) {
     } else if (argument === '--include-local-only') {
       options.includeLocalOnly = true;
     } else if (argument === '--remote') {
+      targetSelections += 1;
       options.remote = true;
     } else if (argument === '--local') {
+      targetSelections += 1;
       options.local = true;
     } else if (argument === '--base-url') {
+      targetSelections += 1;
       index += 1;
-      options.baseUrl = argv[index];
+      const value = argv[index];
+      if (!value?.trim() || value.startsWith('-')) {
+        throw new Error('--base-url requires a non-empty URL.');
+      }
+      options.baseUrl = value;
     } else if (argument === '--timeout-ms') {
       index += 1;
       options.timeoutMs = parsePositiveInt(argv[index], '--timeout-ms');
@@ -152,11 +161,15 @@ function parseArgs(argv) {
       index += 1;
       options.jsonOut = argv[index];
     } else {
-      console.error(`Unknown argument: ${argument}`);
+      console.error('Unknown argument. Run --help for supported options.');
       options.help = true;
       process.exitCode = 1;
       return options;
     }
+  }
+
+  if (targetSelections > 1) {
+    throw new Error('Choose only one target: --local, --remote, or --base-url <url>.');
   }
 
   return options;
@@ -165,7 +178,7 @@ function parseArgs(argv) {
 function parsePositiveInt(rawValue, flagName) {
   const parsed = Number.parseInt(rawValue ?? '', 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`${flagName} expects a positive integer, got: ${rawValue}`);
+    throw new Error(`${flagName} expects a positive integer.`);
   }
   return parsed;
 }
@@ -181,9 +194,9 @@ function printHelp() {
   console.log(`Usage: pnpm probe:auth [options]
 
 Options:
-  --remote                  Use REMOTE_ENDPOINT as the base URL.
-  --local                   Use LOCAL_ENDPOINT as the base URL.
-  --base-url <url>          Override the probe base URL.
+  --remote                  Explicitly use REMOTE_ENDPOINT; missing values fail closed.
+  --local                   Use loopback LOCAL_ENDPOINT; missing values fail closed.
+  --base-url <url>          Explicit HTTP(S) target; cannot combine target flags.
   --dry-run                 Print the planned probe matrix without sending requests.
   --include-disabled        Include repo-marked disabled routes (currently antchain_*).
   --include-local-only      Include local-only helper routes such as embedding_ft_local.
@@ -193,9 +206,12 @@ Options:
   --json-out <path>         Write a JSON report relative to the repo root.
   --help                    Show this help text.
 
+Without a target flag, only a loopback LOCAL_ENDPOINT / EDGE_BASE_URL / BASE_URL is used.
+REMOTE_ENDPOINT is never an implicit fallback. URLs cannot contain credentials, query or fragment.
+
 Environment variables:
-  EDGE_BASE_URL             Full functions base URL. Example: https://<project>.supabase.co/functions/v1
-  REMOTE_ENDPOINT           Existing repo env alias for a remote functions base URL.
+  EDGE_BASE_URL / BASE_URL  Legacy loopback-only aliases unless passed explicitly with --base-url.
+  REMOTE_ENDPOINT           Your remote functions base URL; requires --remote.
   LOCAL_ENDPOINT            Existing repo env alias for a local functions base URL.
   USER_JWT                  Browser/user JWT used for JWT-protected functions.
   REMOTE_SERVICE_API_KEY    Optional service key for SERVICE_API_KEY routes.
@@ -249,35 +265,58 @@ function loadEnvFile(filePath) {
   }
 }
 
-function resolveBaseUrl(options) {
-  const rawValue =
-    options.baseUrl ??
-    (options.remote ? process.env.REMOTE_ENDPOINT : undefined) ??
-    (options.local ? process.env.LOCAL_ENDPOINT : undefined) ??
-    process.env.EDGE_BASE_URL ??
-    process.env.BASE_URL ??
-    process.env.REMOTE_ENDPOINT ??
-    process.env.LOCAL_ENDPOINT;
-
-  if (!rawValue) {
-    return undefined;
+function resolveBaseUrl(options, env = process.env) {
+  if (options.baseUrl !== undefined) {
+    return normalizeBaseUrl(options.baseUrl);
   }
-
-  const trimmed = rawValue.trim().replace(/\/+$/, '');
-  if (!trimmed) {
-    return undefined;
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    if (!parsed.pathname || parsed.pathname === '/') {
-      return `${trimmed}/functions/v1`;
+  if (options.remote) {
+    const remote = readEnv('REMOTE_ENDPOINT', env);
+    if (!remote) {
+      throw new Error('--remote requires an explicit REMOTE_ENDPOINT.');
     }
-  } catch (_error) {
-    return trimmed;
+    return normalizeBaseUrl(remote);
+  }
+  if (options.local) {
+    const local = readEnv('LOCAL_ENDPOINT', env);
+    if (!local) {
+      throw new Error('--local requires LOCAL_ENDPOINT.');
+    }
+    return normalizeBaseUrl(local, true);
   }
 
-  return trimmed;
+  // Existing copied examples may still contain a hosted REMOTE_ENDPOINT. It is
+  // considered only after --remote; unqualified probes can use loopback only.
+  const local =
+    readEnv('LOCAL_ENDPOINT', env) ?? readEnv('EDGE_BASE_URL', env) ?? readEnv('BASE_URL', env);
+  return local ? normalizeBaseUrl(local, true) : undefined;
+}
+
+function normalizeBaseUrl(rawValue, localOnly = false) {
+  let parsed;
+  try {
+    parsed = new URL(rawValue.trim());
+  } catch {
+    throw new Error('Probe base URL must be a valid HTTP(S) URL.');
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error('Probe base URL must use HTTP or HTTPS.');
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error('Probe base URL must not contain credentials, query parameters or fragments.');
+  }
+  const loopback =
+    parsed.hostname === 'localhost' ||
+    parsed.hostname === '[::1]' ||
+    /^127\.\d+\.\d+\.\d+$/.test(parsed.hostname);
+  if (localOnly && !loopback) {
+    throw new Error(
+      'Local probes require a loopback URL; use --remote or --base-url for remote targets.',
+    );
+  }
+  if (parsed.pathname === '/') {
+    parsed.pathname = '/functions/v1';
+  }
+  return parsed.href.replace(/\/+$/, '');
 }
 
 function resolveCredentials() {
@@ -287,8 +326,8 @@ function resolveCredentials() {
   };
 }
 
-function readEnv(name) {
-  const value = process.env[name];
+function readEnv(name, env = process.env) {
+  const value = env[name];
   if (!value) {
     return undefined;
   }
@@ -527,6 +566,7 @@ async function runProbe(definition, variant, context) {
 
   try {
     const response = await fetch(url, {
+      redirect: 'manual',
       method: definition.preferredMethod,
       headers,
       body,
@@ -693,7 +733,11 @@ async function runWithConcurrency(items, limit, worker) {
   return results;
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { parseArgs, resolveBaseUrl };

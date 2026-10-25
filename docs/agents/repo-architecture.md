@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-19
-lastReviewedCommit: 0a242b956e9fd6eaa24cf5217578560c840bf1b6
-lastReviewedNote: 'Edge #498: reviewed exact current-serve Kong generation proof and narrow automatic canonical CI coverage for the actual synthetic-stack inputs, with independent positive/removal/negative controls. Jobs, events, privileges, credentials, refs, product/dependency pins and functional assertions remain unchanged; new hosted qualification is required.'
+lastReviewedAt: '2026-10-25'
+lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
+lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -84,6 +84,8 @@ Data Product closure intent admits allocation v3, v4 and v5 and forwards an expl
 | `test.example.http` | stable | checked-in smoke request collection for local and remote routes |
 | `.github/PULL_REQUEST_TEMPLATE/*.md` | stable | M2 branch-specific PR note shape for feature and promote flows |
 | `.github/dependabot.yml` and `.github/workflows/ci.yml` | stable | bounded dependency discovery and the existing secretless canonical gate for dependency/selected stack qualification input PRs; detailed scope and coverage limits live in the validation guide |
+
+Auth-probe destination selection is local by default: unqualified URLs must be loopback, while remote URLs require explicit target selection. The generic HTTP env example leaves the remote destination empty. Probe target flags are mutually exclusive; a missing selected endpoint and invalid or credential-bearing URL fail before dispatch. This does not alter the explicitly selected maintainer deployment project refs.
 
 ## Shared browser preflight policy
 

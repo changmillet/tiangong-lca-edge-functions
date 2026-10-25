@@ -39,9 +39,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-19
-lastReviewedCommit: 0a242b956e9fd6eaa24cf5217578560c840bf1b6
-lastReviewedNote: 'Edge #498: reviewed exact current-serve Kong generation proof and narrow automatic canonical CI coverage for the actual synthetic-stack inputs, with independent positive/removal/negative controls. Jobs, events, privileges, credentials, refs, product/dependency pins and functional assertions remain unchanged; new hosted qualification is required.'
+lastReviewedAt: '2026-10-25'
+lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
+lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
 related:
   - .docpact/config.yaml
   - docs/agents/repo-validation.md
@@ -107,7 +107,7 @@ Keep these entry-level facts in `AGENTS.md`. Use `README.md` and `docs/agents/re
   - `pnpm deploy:main <function-name> [more-function-names...]`
   - `pnpm deploy:portal-r0 preview` for the fixed disposable R0 function only
   - `pnpm cleanup:portal-r0 preview` for guarded remote function deletion plus external Redis/credential cleanup checks
-- auth and connectivity drift probe: `pnpm probe:auth --remote` or `pnpm probe:auth --local`
+- auth and connectivity drift probe: `pnpm probe:auth --remote` or `pnpm probe:auth --local`; an unqualified probe is loopback-only, and missing/conflicting/invalid selected targets fail before network dispatch
 - local serve and scripted remote deploys both use `--no-verify-jwt`
 - scripted remote deploys pass `supabase/functions/deno.json` as the Supabase CLI import map so remote bundling resolves shared npm/jsr imports consistently
 - gateway JWT verification being off does not make runtime auth optional; functions must still authenticate and authorize requests explicitly
