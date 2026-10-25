@@ -23,9 +23,9 @@ checkPaths:
   - supabase/config.toml
   - supabase/.env.example
   - test.example.http
-lastReviewedAt: 2026-10-19
-lastReviewedCommit: bc529ea3d64c761be6c3132e957829fc9bfab2f7
-lastReviewedNote: 'Edge #496: reviewed exact worker version getters separately from compiler/binary identity, concrete fixture readiness at unchanged bounds, bounded pre-cleanup evidence and source-supported normal shutdown/stop inventory. Security/body/JWT/cancellation assertions remain; actual new hosted qualification is pending.'
+lastReviewedAt: '2026-10-25'
+lastReviewedCommit: 65aec47600a1489635bf6826973ccc4935d6b0ce
+lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
 ---
 
 # TianGong-LCA-Edge-Functions
@@ -142,7 +142,7 @@ The runner accepts only `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`,
 cp .env.example .env
 ```
 
-This root `.env` is only for local HTTP clients and request collections. It should contain endpoint URLs, request credentials, and request ids such as:
+This root `.env` is only for local HTTP clients and request collections. The example sets a loopback `LOCAL_ENDPOINT` and leaves `REMOTE_ENDPOINT` empty. Set a remote endpoint only for your own project and select it explicitly with `--remote` or `--base-url`; an unqualified auth probe never uses `REMOTE_ENDPOINT`. It should contain endpoint URLs, request credentials, and request ids such as:
 
 - `LOCAL_ENDPOINT` / `REMOTE_ENDPOINT`
 - `X_REGION`
@@ -395,10 +395,14 @@ Clients should treat `expired`, `deleted`, and `object_missing` as terminal down
 
 ### Auth / connectivity probe
 
-当你怀疑远端出现“函数通了，但 auth 行为漂移”这类问题时，优先跑仓库内的统一探测脚本：
+先用仓库内的统一探测脚本查看计划，再显式选择本地或远端目标：
 
 ```bash
-pnpm probe:auth --remote
+pnpm probe:auth --dry-run
+pnpm probe:auth --local
+
+# 替换为你自己的项目地址后，才显式探测远端。
+REMOTE_ENDPOINT="https://<your-project>.supabase.co/functions/v1" pnpm probe:auth --remote
 ```
 
 脚本会自动读取：
@@ -414,6 +418,16 @@ EDGE_BASE_URL="https://<project-ref>.supabase.co/functions/v1" \
 USER_JWT="<your-user-jwt>" \
 pnpm probe:auth --base-url "$EDGE_BASE_URL"
 ```
+
+目标规则：
+
+- `.env.example` 只预置本机地址，远端地址为空；已有 `.env` 即使仍含 `REMOTE_ENDPOINT`，不带目标参数也不会选用它
+- `--local` 只读取 `LOCAL_ENDPOINT`，且只接受 localhost、127.0.0.0/8 或 IPv6 回环地址；未配置即失败
+- `--remote` 必须显式配置 `REMOTE_ENDPOINT`；缺少时不会退回本地
+- `--base-url` 本身是显式目标；三个目标参数互斥，重复或缺值均在请求前失败
+- 不带目标参数时，仅接受 `LOCAL_ENDPOINT`，或兼容的 `EDGE_BASE_URL` / `BASE_URL` 中的回环地址；仅配置远端地址会在请求前失败
+- URL 必须为 HTTP(S)，不得嵌入账号密码、查询参数或片段；错误日志不回显这些值
+- HTTP 重定向只记录状态，不自动跟随到未选择的地址
 
 默认行为：
 
