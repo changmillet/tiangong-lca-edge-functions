@@ -379,7 +379,10 @@ async function enrichPackagePreview(
     snapshotIndex,
     queryArtifact,
   });
-  const previewMetadataRefs = previewMetadataRefsFromProjection(projection);
+  const previewMetadataRefs = previewMetadataRefsFromProjection(
+    projection,
+    selectPreviewImpact(data, request, projection.impactOptions),
+  );
   if (
     previewMetadataRefs.processes.length > 0 ||
     previewMetadataRefs.impactCategoryIds.length > 0

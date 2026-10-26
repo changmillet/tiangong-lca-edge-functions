@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertThrows } from 'jsr:@std/assert';
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
+import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2.118.0';
 
 import type { ActorContext } from '../supabase/functions/_shared/command_runtime/actor_context.ts';
 import { buildCommandAuditPayload } from '../supabase/functions/_shared/command_runtime/audit_log.ts';
@@ -1795,6 +1795,7 @@ Deno.test(
             impact_map: [
               {
                 impact_id: 'impact-climate',
+                impact_version: '01.00.000',
                 impact_key: 'climate-change',
                 impact_index: 0,
                 impact_name: 'Climate change',
@@ -1832,6 +1833,7 @@ Deno.test(
             },
           ],
           impactCategoryIds: ['impact-climate'],
+          impactRefs: [{ impactCategoryId: 'impact-climate', impactVersion: '01.00.000' }],
         });
         return Promise.resolve({
           ok: true,
@@ -1899,7 +1901,7 @@ Deno.test(
             impactIndex: 0,
             impactName: 'Climate change',
             impactVersion: '01.00.000',
-            unit: 'kg CO2 equivalents',
+            unit: 'kg CO2 eq',
             offset: 0,
             limit: 25,
             returnedCount: 1,
@@ -1918,7 +1920,7 @@ Deno.test(
                 impactIndex: 0,
                 impactName: 'Climate change',
                 impactVersion: '01.00.000',
-                unit: 'kg CO2 equivalents',
+                unit: 'kg CO2 eq',
                 value: 42,
               },
             ],
@@ -1930,7 +1932,7 @@ Deno.test(
               impactIndex: 0,
               impactName: 'Climate change',
               impactVersion: '01.00.000',
-              unit: 'kg CO2 equivalents',
+              unit: 'kg CO2 eq',
             },
           ],
         },
@@ -2296,3 +2298,62 @@ Deno.test('allocation v5 closure RPC preserves exact intent and database rejecti
     if (!result.ok) assertEquals(result.code, 'invalid_closure_link_policy');
   }
 });
+
+Deno.test(
+  'preview metadata joins exact method pairs without a latest-revision fallback',
+  async () => {
+    const requests: URL[] = [];
+    const client = createClient('https://metadata.example.invalid', 'fixture-key', {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (input) => {
+          requests.push(new URL(String(input)));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify([
+                { id: 'method-a', version: '02.00.000', json: {} },
+                { id: 'method-a', version: '01.00.000', json: {} },
+                { id: 'method-b', version: '01.00.000', json: {} },
+                { id: 'method-b', version: '02.00.000', json: {} },
+              ]),
+              { headers: { 'content-type': 'application/json' } },
+            ),
+          );
+        },
+      },
+    });
+    const repo = createDataProductCommandRepository(client, client);
+    const result = await repo.fetchPreviewMetadata({
+      processes: [],
+      impactCategoryIds: ['method-a', 'method-b'],
+      impactRefs: [
+        { impactCategoryId: 'method-a', impactVersion: '01.00.000' },
+        { impactCategoryId: 'method-b', impactVersion: '02.00.000' },
+        { impactCategoryId: 'method-a', impactVersion: '01.00.000' },
+        { impactCategoryId: 'unrequested', impactVersion: '03.00.000' },
+      ],
+    });
+    assert(result.ok);
+    assertEquals(
+      result.data.impacts.map(({ impactCategoryId, impactVersion }) => [
+        impactCategoryId,
+        impactVersion,
+      ]),
+      [
+        ['method-a', '01.00.000'],
+        ['method-b', '02.00.000'],
+      ],
+    );
+    assertEquals(requests.length, 1);
+    assertEquals(requests[0].searchParams.get('id'), 'in.(method-a,method-b)');
+    assertEquals(requests[0].searchParams.get('version'), 'in.(01.00.000,02.00.000)');
+    assertEquals(requests[0].searchParams.has('order'), false);
+    const legacy = await repo.fetchPreviewMetadata({
+      processes: [],
+      impactCategoryIds: ['method-a'],
+    });
+    assert(legacy.ok);
+    assertEquals(legacy.data.impacts, []);
+    assertEquals(requests.length, 1);
+  },
+);

@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-25
-lastReviewedCommit: e13d8c2aee23fc58241b64053007bbcdb14d8524
-lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
+lastReviewedAt: 2026-10-26
+lastReviewedCommit: 3b699afeae7db63ad7b07f2385fceaed94813027
+lastReviewedNote: 'Edge #509: reviewed exact snapshot method revision and frozen unit preservation, optional label enrichment, legacy reads and unchanged calculation and deployment boundaries.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
