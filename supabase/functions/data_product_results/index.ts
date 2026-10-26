@@ -301,6 +301,16 @@ export function createPublishedResultsRepository(
       const metadata = await artifacts.fetchPreviewMetadata({
         processes: processRefsForRequest(request),
         impactCategoryIds: impactCategoryIdsForRequest(request, snapshotIndex.data),
+        impactRefs: snapshotIndex.data.impact_map
+          .filter(
+            (entry) =>
+              impactCategoryIdsForRequest(request, snapshotIndex.data).includes(entry.impact_id) &&
+              entry.impact_version,
+          )
+          .map((entry) => ({
+            impactCategoryId: entry.impact_id,
+            impactVersion: entry.impact_version!,
+          })),
       });
       const processMetadata = metadata.ok ? metadata.data.processes : [];
       const impactMetadata = metadata.ok ? metadata.data.impacts : [];
