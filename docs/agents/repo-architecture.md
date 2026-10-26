@@ -35,9 +35,9 @@ checkPaths:
   - scripts/docpact
   - scripts/docpact-gate.sh
   - scripts/install-git-hooks.sh
-lastReviewedAt: 2026-10-25
-lastReviewedCommit: e13d8c2aee23fc58241b64053007bbcdb14d8524
-lastReviewedNote: 'Edge #502: reviewed loopback-only implicit auth probes, explicit remote selection and fail-closed URL/flag validation; maintainer deploy refs and Edge business runtime remain unchanged.'
+lastReviewedAt: 2026-10-26
+lastReviewedCommit: 3b699afeae7db63ad7b07f2385fceaed94813027
+lastReviewedNote: 'Edge #509: reviewed exact snapshot method revision and frozen unit preservation, optional label enrichment, legacy reads and unchanged calculation and deployment boundaries.'
 related:
   - ../../AGENTS.md
   - ../../.docpact/config.yaml
@@ -399,3 +399,7 @@ Independent calculation exports (Edge #483 / Worker #320) use `request_calculati
 The Worker owns calculation descriptor bytes and their SHA-256 identity. Database #873 stores the immutable descriptor, activates an identity only through a service-only compare-and-set operation, and projects `calculationCurrent` on `svc_lca_snapshot_candidates`. Edge requires the literal boolean `true` before returning a snapshot to a new solve, result-query or contribution request, including explicit IDs and automatic lookup. A missing projection is incompatible; deploy Database #873 before this consumer.
 
 Edge does not interpret descriptor fields or maintain an LCIA algorithm version. The existing numerical input eligibility and actor checks remain separate. Changing default-factor selection requires a new Worker descriptor and explicit activation, not another Edge constant or scanner migration. Historical artifact/package reads remain independent of new-computation admission. Exchange location and factor coverage do not participate in this compatibility decision.
+
+## Frozen LCIA result metadata
+
+Snapshot method IDs, revisions, units and numeric values remain authoritative for private and published result reads. The optional `impact_version` field carries the snapshot revision in `process_all_impacts` rows. Package-preview labels may be enriched only from the exact method ID/revision pair; independent ID/version query filters are post-filtered to those pairs. Missing revisions skip live method lookup and retain frozen names and units. Metadata enrichment never substitutes a latest revision or changes calculation readiness.

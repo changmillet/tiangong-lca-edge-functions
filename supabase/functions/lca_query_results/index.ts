@@ -349,6 +349,7 @@ Deno.serve(async (req) => {
 
     const values = impacts.map((impact) => ({
       impact_id: impact.impact_id,
+      impact_version: impact.impact_version,
       impact_index: impact.impact_index,
       impact_key: impact.impact_key,
       impact_name: impact.impact_name,

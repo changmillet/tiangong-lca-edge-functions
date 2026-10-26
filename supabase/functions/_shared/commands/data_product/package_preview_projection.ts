@@ -13,6 +13,7 @@ export type SnapshotIndexProcessEntry = {
 export type SnapshotIndexImpactEntry = {
   impact_id: string;
   impact_index: number;
+  impact_version?: string;
   impact_key?: string;
   impact_name: string;
   unit: string;
@@ -126,6 +127,7 @@ export type PublishedLciaAllImpactsProjection = {
   rowCount: number;
   values: Array<{
     impact_id: string;
+    impact_version?: string;
     impact_index: number;
     impact_name: string;
     unit: string;
@@ -277,8 +279,8 @@ function impactMetadataLookup(
 ): Map<string, LciaResultPackageImpactMetadata> {
   const lookup = new Map<string, LciaResultPackageImpactMetadata>();
   for (const metadata of impactMetadata) {
-    if (metadata.impactCategoryId) {
-      lookup.set(metadata.impactCategoryId, metadata);
+    if (metadata.impactCategoryId && metadata.impactVersion) {
+      lookup.set(processLookupKey(metadata.impactCategoryId, metadata.impactVersion), metadata);
     }
   }
   return lookup;
@@ -383,14 +385,16 @@ function impactOptionsFrom(
     )
     .sort((left, right) => left.impact_index - right.impact_index)
     .map((entry) => {
-      const metadata = metadataLookup.get(entry.impact_id);
+      const metadata = entry.impact_version
+        ? metadataLookup.get(processLookupKey(entry.impact_id, entry.impact_version))
+        : undefined;
       return {
         impactCategoryId: entry.impact_id,
         impactKey: entry.impact_key || entry.impact_id,
         impactIndex: entry.impact_index,
         impactName: metadata?.impactName || entry.impact_name || entry.impact_id,
-        impactVersion: metadata?.impactVersion ?? null,
-        unit: metadata?.unit || entry.unit || '',
+        impactVersion: entry.impact_version ?? null,
+        unit: entry.unit || '',
       };
     });
 }
@@ -504,6 +508,7 @@ export function projectPublishedProcessAllImpacts({
 
   const values = selectedImpacts.map((impact) => ({
     impact_id: impact.impactCategoryId,
+    ...(impact.impactVersion ? { impact_version: impact.impactVersion } : {}),
     impact_index: impact.impactIndex,
     impact_name: impact.impactName,
     unit: impact.unit,
@@ -867,9 +872,13 @@ export function projectLciaResultPackagePreviewRows({
   };
 }
 
-export function previewMetadataRefsFromProjection(projection: LciaResultPackagePreviewProjection): {
+export function previewMetadataRefsFromProjection(
+  projection: LciaResultPackagePreviewProjection,
+  selectedImpact?: LciaResultPackageImpactOption | null,
+): {
   processes: Array<{ processId: string; processVersion: string }>;
   impactCategoryIds: string[];
+  impactRefs: Array<{ impactCategoryId: string; impactVersion: string }>;
 } {
   const processKeys = new Set<string>();
   const processes: Array<{ processId: string; processVersion: string }> = [];
@@ -890,7 +899,9 @@ export function previewMetadataRefsFromProjection(projection: LciaResultPackageP
   const impactCategoryIds = Array.from(
     new Set(
       [
-        projection.detailPage.status === 'ready' ? projection.detailPage.impactCategoryId : null,
+        projection.detailPage.status === 'ready'
+          ? projection.detailPage.impactCategoryId
+          : selectedImpact?.impactCategoryId,
       ].filter(
         (impactCategoryId): impactCategoryId is string =>
           typeof impactCategoryId === 'string' && impactCategoryId.length > 0,
@@ -898,7 +909,13 @@ export function previewMetadataRefsFromProjection(projection: LciaResultPackageP
     ),
   );
 
-  return { processes, impactCategoryIds };
+  const impactRefs = projection.impactOptions
+    .filter((impact) => impactCategoryIds.includes(impact.impactCategoryId) && impact.impactVersion)
+    .map((impact) => ({
+      impactCategoryId: impact.impactCategoryId,
+      impactVersion: impact.impactVersion!,
+    }));
+  return { processes, impactCategoryIds, impactRefs };
 }
 
 export function snapshotIdFromPackagePreview(preview: unknown): string | null {
